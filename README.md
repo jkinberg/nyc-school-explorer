@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NYC School Explorer
+
+An AI-native data journalism tool for exploring NYC School Quality Report data through natural language conversation, with responsible AI guardrails and transparent methodology.
+
+## Features
+
+- **Natural language chat** powered by Claude for querying NYC school data
+- **Three-layer AI guardrails**: pre-filter, system prompt, and tool-level context to ensure responsible framing
+- **LLM-as-judge evaluation**: every response is scored on factual accuracy, context inclusion, limitation acknowledgment, responsible framing, and query relevance -- scores are shown in the chat UI
+- **MCP tools** for school search, profiles, correlations, charts, and curated lists
+- **Interactive charts** via Recharts for data visualization
+- **School profiles** with year-over-year comparison
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Seed the database (if not already done)
+npx tsx scripts/seed-database.ts
+
+# Add your API key to .env.local
+echo "ANTHROPIC_API_KEY=your-key-here" > .env.local
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore page to start chatting.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework**: Next.js 16 with App Router
+- **Language**: TypeScript
+- **Database**: SQLite with better-sqlite3
+- **AI**: Anthropic Claude API (claude-sonnet-4-20250514 for chat, claude-haiku-3-20240307 for evaluation)
+- **Charts**: Recharts
+- **Styling**: Tailwind CSS 4
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | Yes | -- | Anthropic API key for chat and evaluation |
+| `ENABLE_EVALUATION` | No | `true` | Set to `false` to disable LLM-as-judge response scoring |
+| `RATE_LIMIT_ENABLED` | No | `true` | Set to `false` to disable rate limiting |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Data Sources
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- NYC DOE School Quality Reports (2023-24 and 2024-25)
+- LCGMS + ShapePoints for school locations
+- LL16 Budget Reports (2022-23 through 2024-25)
+- LL93 Suspension Reports (2022-23 through 2024-25)
+- PTA Financial Reporting (2022-23 through 2024-25)
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private project.

@@ -165,11 +165,27 @@ _context: {
 
 1. Receive messages from client
 2. Run pre-filter on latest user message
-3. If blocked, return reframe immediately
+3. If blocked, return reframe immediately (with `evaluating: false`)
 4. Call Claude with system prompt and tool definitions
 5. Execute any tool calls Claude requests
-6. Return streaming response
-7. Fire async evaluation (non-blocking, for quality monitoring)
+6. Stream response via SSE (`text_delta` events)
+7. Emit `done` event with `evaluating: true/false` flag
+8. If evaluation enabled: await LLM-as-judge evaluation (10s timeout), emit `evaluation` SSE event
+9. Close stream
+
+### Evaluation SSE Flow
+
+The chat API keeps the SSE stream open after `done` to deliver evaluation results:
+
+```
+text_delta → ... → done (evaluating: true) → [2-5s] → evaluation → stream closes
+```
+
+- The `done` event includes an `evaluating` boolean so the client can show an "Evaluating response..." indicator
+- Evaluation uses `claude-haiku-3-20240307` (cheaper/faster than the main chat model)
+- On timeout or failure, the stream closes without an `evaluation` event; the client cleans up gracefully
+- Pre-filtered (blocked) responses skip evaluation entirely (`evaluating: false`)
+- The `ConfidenceBadge` component renders evaluation scores below assistant message bubbles as a click-to-expand panel
 
 ### Responsible Framing
 
@@ -201,7 +217,8 @@ Raw Excel files are in `/Users/josh/Projects/nyc-schools-data/data-samples/raw/`
 ## Environment Variables
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...  # Required for chat functionality
+ANTHROPIC_API_KEY=sk-ant-...    # Required for chat functionality
+ENABLE_EVALUATION=true          # Set to "false" to disable LLM-as-judge evaluation (default: enabled)
 ```
 
 ## Common Tasks
