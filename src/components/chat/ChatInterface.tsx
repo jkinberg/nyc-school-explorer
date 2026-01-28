@@ -1,0 +1,338 @@
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { MessageBubble } from './MessageBubble';
+import { SuggestedQueries } from './SuggestedQueries';
+import { generateId } from '@/lib/utils/formatting';
+import type { EvaluationResult } from '@/types/chat';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  isLoading?: boolean;
+  isStreaming?: boolean;
+  isEvaluating?: boolean;
+  evaluation?: EvaluationResult;
+}
+
+interface SuggestedQuery {
+  text: string;
+  category: string;
+}
+
+interface SSEEvent {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+const INITIAL_SUGGESTIONS: SuggestedQuery[] = [
+  { text: 'Show me hidden gem schools in the Bronx', category: 'explore' },
+  { text: 'What does Impact Score measure?', category: 'explain' },
+  { text: 'Find high-growth schools serving high-poverty populations', category: 'explore' },
+  { text: 'How does poverty correlate with test scores?', category: 'explore' },
+];
+
+function parseSSEEvents(buffer: string): { parsed: SSEEvent[]; remaining: string } {
+  const parsed: SSEEvent[] = [];
+  const blocks = buffer.split('\n\n');
+
+  // The last element may be incomplete — keep it as remaining
+  const remaining = blocks.pop() || '';
+
+  for (const block of blocks) {
+    if (!block.trim()) continue;
+
+    let eventType = '';
+    let eventData = '';
+
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event: ')) {
+        eventType = line.slice(7);
+      } else if (line.startsWith('data: ')) {
+        eventData = line.slice(6);
+      }
+    }
+
+    if (eventType && eventData) {
+      try {
+        parsed.push({ type: eventType, data: JSON.parse(eventData) });
+      } catch {
+        // Skip malformed events
+      }
+    }
+  }
+
+  return { parsed, remaining };
+}
+
+export function ChatInterface() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestedQueries, setSuggestedQueries] = useState<SuggestedQuery[]>(INITIAL_SUGGESTIONS);
+  const [error, setError] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Auto-resize textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+  };
+
+  const sendMessage = useCallback(async (messageText: string) => {
+    if (!messageText.trim() || isLoading) return;
+
+    setError(null);
+    const userMessage: Message = {
+      id: generateId(),
+      role: 'user',
+      content: messageText.trim(),
+      timestamp: new Date()
+    };
+
+    // Add user message
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+
+    // Add loading message
+    const loadingId = generateId();
+    setMessages(prev => [...prev, {
+      id: loadingId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isLoading: true
+    }]);
+    setIsLoading(true);
+
+    try {
+      // Prepare messages for API (last 10 messages to manage context)
+      const recentMessages = [...messages, userMessage]
+        .slice(-10)
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: recentMessages })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to get response');
+      }
+
+      // Read SSE stream
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let hasReceivedText = false;
+
+      while (true) {
+        const { done: streamDone, value } = await reader.read();
+        if (streamDone) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const { parsed, remaining } = parseSSEEvents(buffer);
+        buffer = remaining;
+
+        for (const event of parsed) {
+          switch (event.type) {
+            case 'text_delta': {
+              const text = event.data.text as string;
+              if (!hasReceivedText) {
+                hasReceivedText = true;
+                // First text delta: transition from loading to streaming
+                setMessages(prev => prev.map(m =>
+                  m.id === loadingId
+                    ? { ...m, content: text, isLoading: false, isStreaming: true }
+                    : m
+                ));
+              } else {
+                // Subsequent deltas: append text
+                setMessages(prev => prev.map(m =>
+                  m.id === loadingId
+                    ? { ...m, content: m.content + text }
+                    : m
+                ));
+              }
+              break;
+            }
+
+            case 'tool_start':
+              // Keep loading state during tool execution
+              if (!hasReceivedText) {
+                setMessages(prev => prev.map(m =>
+                  m.id === loadingId
+                    ? { ...m, isLoading: true }
+                    : m
+                ));
+              }
+              break;
+
+            case 'tool_end':
+              // Tool finished — continue waiting for text
+              break;
+
+            case 'done': {
+              const queries = event.data.suggestedQueries as SuggestedQuery[] | undefined;
+              if (queries && queries.length > 0) {
+                setSuggestedQueries(queries);
+              }
+              const evaluating = event.data.evaluating as boolean;
+              // Mark streaming complete, set evaluating state
+              setMessages(prev => prev.map(m =>
+                m.id === loadingId
+                  ? { ...m, isStreaming: false, isEvaluating: evaluating === true }
+                  : m
+              ));
+              break;
+            }
+
+            case 'evaluation': {
+              const evaluation = event.data as unknown as EvaluationResult;
+              setMessages(prev => prev.map(m =>
+                m.id === loadingId
+                  ? { ...m, isEvaluating: false, evaluation }
+                  : m
+              ));
+              break;
+            }
+
+            case 'error':
+              throw new Error(event.data.error as string);
+          }
+        }
+      }
+
+      // Clean up isEvaluating in case evaluation timed out
+      setMessages(prev => prev.map(m =>
+        m.id === loadingId && m.isEvaluating ? { ...m, isEvaluating: false } : m
+      ));
+
+    } catch (err) {
+      console.error('Chat error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+
+      // Remove loading message
+      setMessages(prev => prev.filter(m => m.id !== loadingId));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, isLoading]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+    }
+  };
+
+  const handleSuggestionClick = (query: string) => {
+    sendMessage(query);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Explore NYC School Data
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+              Ask questions about school quality, student growth, and educational equity
+              in NYC public schools.
+            </p>
+            <SuggestedQueries
+              queries={suggestedQueries}
+              onSelect={handleSuggestionClick}
+            />
+          </div>
+        ) : (
+          <>
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+              />
+            ))}
+
+            {/* Show suggestions after responses */}
+            {!isLoading && messages.length > 0 && (
+              <div className="pt-4">
+                <SuggestedQueries
+                  queries={suggestedQueries}
+                  onSelect={handleSuggestionClick}
+                  compact
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input area */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about NYC schools..."
+            className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={1}
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading ? (
+              <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              'Send'
+            )}
+          </button>
+        </form>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+          Data from NYC DOE School Quality Reports (2023-24, 2024-25).
+          AI responses should be verified.
+        </p>
+      </div>
+    </div>
+  );
+}
