@@ -23,7 +23,7 @@ npm run dev
 - **Framework**: Next.js 16 with App Router
 - **Language**: TypeScript
 - **Database**: SQLite with better-sqlite3
-- **AI**: Anthropic Claude API (claude-sonnet-4-20250514)
+- **AI**: Anthropic Claude API (claude-sonnet-4-20250514 for chat), Google Gemini (gemini-3-flash-preview for evaluation)
 - **Charts**: Recharts
 - **Styling**: Tailwind CSS 4
 
@@ -182,7 +182,7 @@ text_delta → ... → done (evaluating: true) → [2-5s] → evaluation → str
 ```
 
 - The `done` event includes an `evaluating` boolean so the client can show an "Evaluating response..." indicator
-- Evaluation uses `claude-haiku-3-20240307` (cheaper/faster than the main chat model)
+- Evaluation uses `gemini-3-flash-preview` (independent model provider from the main chat model)
 - On timeout or failure, the stream closes without an `evaluation` event; the client cleans up gracefully
 - Pre-filtered (blocked) responses skip evaluation entirely (`evaluating: false`)
 - The `ConfidenceBadge` component renders evaluation scores below assistant message bubbles as a click-to-expand panel
@@ -199,12 +199,23 @@ When modifying or adding features, maintain these principles:
 
 ## Data Sources
 
-NYC DOE School Quality Reports (2023-24 and 2024-25):
+NYC DOE School Quality Reports (2022-23, 2023-24, and 2024-25):
 - Elementary/Middle/K-8 (EMS reports)
 - High School (HS reports)
 - High School Transfer (HST reports)
 - District 75 (D75 reports)
 - Early Childhood (EC reports)
+
+**Note:** Impact Score and Performance Score were introduced in 2023-24. The 2022-23 data includes ratings, surveys, ENI, enrollment, and demographics, but NOT Impact/Performance scores (those columns are NULL).
+
+**Rating Column Mapping:** NYC DOE renamed rating columns between 2022-23 and 2023-24. We merge them for trend analysis:
+| Database Column | 2022-23 Source | 2023-24+ Source |
+|-----------------|----------------|-----------------|
+| `rating_instruction` | Rigorous Instruction Rating | Instruction and Performance - Rating |
+| `rating_safety` | Supportive Environment Rating | Safety and School Climate - Rating |
+| `rating_families` | Strong Family-Community Ties Rating | Relationships with Families - Rating |
+
+Year-over-year rating comparisons should acknowledge potential methodology changes.
 
 Additional data sources:
 - **LCGMS** (Location Code Management System) + ShapePoints DBF for school locations and coordinates
@@ -218,6 +229,7 @@ Raw Excel files are in `/Users/josh/Projects/nyc-schools-data/data-samples/raw/`
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...    # Required for chat functionality
+GEMINI_API_KEY=...              # Required for LLM-as-judge evaluation (Gemini Flash)
 ENABLE_EVALUATION=true          # Set to "false" to disable LLM-as-judge evaluation (default: enabled)
 ```
 
@@ -240,11 +252,16 @@ Edit `BLOCKED_PATTERNS` or `FLAG_PATTERNS` in `src/lib/ai/prefilter.ts`
 ### Update system prompt
 Edit `SYSTEM_PROMPT` in `src/lib/ai/system-prompt.ts`
 
-## Data Statistics (2024-25)
+## Data Statistics
 
-### All School Types
-- Total schools: 1,889
-- With metrics: 1,740
+### School Metrics by Year
+- 2022-23: 1,863 schools (no Impact/Performance scores)
+- 2023-24: 1,867 schools
+- 2024-25: 1,874 schools
+
+### All School Types (2024-25)
+- Total schools: 1,894
+- With metrics: 1,874
 
 ### EMS Only (Scope of Hidden Gems Analysis)
 - High-poverty EMS schools: ~710
@@ -262,7 +279,7 @@ Edit `SYSTEM_PROMPT` in `src/lib/ai/system-prompt.ts`
 
 ## Known Limitations
 
-- Only 2 years of Impact Score data available
+- Only 2 years of Impact Score data available (2023-24, 2024-25); 2022-23 has other metrics but no Impact/Performance scores
 - Impact Score methodology not fully disclosed by NYC DOE
 - No student mobility data (can't rule out selection effects)
 - Charter school budget data not comparable to DOE-managed schools

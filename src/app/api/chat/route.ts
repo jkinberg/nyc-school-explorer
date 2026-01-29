@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { checkPrefilter } from '@/lib/ai/prefilter';
 import { getSystemPrompt } from '@/lib/ai/system-prompt';
 import { evaluateResponse } from '@/lib/ai/evaluation';
+import { generateSuggestedQueriesWithLLM } from '@/lib/ai/suggestions';
 import { ALL_TOOL_DEFINITIONS, executeTool } from '@/lib/mcp';
 import {
   checkRateLimit,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
         start(controller) {
           const encoder = new TextEncoder();
           controller.enqueue(encoder.encode(sseEvent('text_delta', { text: prefilterResult.reframe })));
-          controller.enqueue(encoder.encode(sseEvent('done', { suggestedQueries: [], usage: {}, evaluating: false })));
+          controller.enqueue(encoder.encode(sseEvent('done', { usage: {}, evaluating: false, suggestionsLoading: false })));
           controller.close();
         }
       });
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest) {
         const encoder = new TextEncoder();
         let accumulatedText = '';
         const toolResults: string[] = [];
+        const toolNames: string[] = [];
         let totalUsage = { input_tokens: 0, output_tokens: 0 };
 
         // Conversation messages grow with each tool-use iteration
@@ -146,6 +148,8 @@ export async function POST(request: NextRequest) {
 
         try {
           let continueLoop = true;
+          const MAX_TOOL_ITERATIONS = 5;
+          let toolIterations = 0;
 
           while (continueLoop) {
             // Create streaming request
@@ -182,18 +186,51 @@ export async function POST(request: NextRequest) {
               const toolResultsContent: Anthropic.ToolResultBlockParam[] = [];
 
               for (const toolUse of toolUseBlocks) {
+                // Track tool names for suggestion generation
+                toolNames.push(toolUse.name);
+
                 // Emit tool_start event
                 controller.enqueue(encoder.encode(sseEvent('tool_start', { name: toolUse.name })));
 
                 try {
-                  const result = executeTool(toolUse.name, toolUse.input as Record<string, unknown>);
+                  const result = executeTool(toolUse.name, toolUse.input as Record<string, unknown>) as Record<string, unknown>;
+
+                  // Store full result for evaluation
                   toolResults.push(JSON.stringify(result));
 
-                  toolResultsContent.push({
-                    type: 'tool_result',
-                    tool_use_id: toolUse.id,
-                    content: JSON.stringify(result)
-                  });
+                  if (toolUse.name === 'generate_chart') {
+                    // Layer 1: Send full chart data to client for rendering
+                    controller.enqueue(encoder.encode(sseEvent('chart_data', {
+                      toolUseId: toolUse.id,
+                      ...result
+                    })));
+
+                    // Send only a lightweight summary to Claude
+                    const chartResult = result as { chart: { type: string; title: string; xAxis: unknown; yAxis: unknown; data: unknown[] }; _context: unknown };
+                    const summary = {
+                      chart: {
+                        type: chartResult.chart.type,
+                        title: chartResult.chart.title,
+                        xAxis: chartResult.chart.xAxis,
+                        yAxis: chartResult.chart.yAxis,
+                        data_point_count: chartResult.chart.data.length,
+                      },
+                      _context: chartResult._context,
+                    };
+                    toolResultsContent.push({
+                      type: 'tool_result',
+                      tool_use_id: toolUse.id,
+                      content: JSON.stringify(summary)
+                    });
+                  } else {
+                    // Layer 2: Summarize tool results for conversation context
+                    const summarized = summarizeForConversation(toolUse.name, result);
+                    toolResultsContent.push({
+                      type: 'tool_result',
+                      tool_use_id: toolUse.id,
+                      content: JSON.stringify(summarized)
+                    });
+                  }
                 } catch (toolError) {
                   console.error(`Tool error (${toolUse.name}):`, toolError);
                   toolResultsContent.push({
@@ -208,12 +245,53 @@ export async function POST(request: NextRequest) {
                 controller.enqueue(encoder.encode(sseEvent('tool_end', { name: toolUse.name })));
               }
 
+              toolIterations++;
+
               // Add assistant response and tool results to conversation for next iteration
               conversationMessages = [
                 ...conversationMessages,
                 { role: 'assistant', content: finalMessage.content },
                 { role: 'user', content: toolResultsContent }
               ];
+
+              // Safety cap: prevent runaway tool loops
+              if (toolIterations >= MAX_TOOL_ITERATIONS) {
+                console.warn(`Tool iteration cap (${MAX_TOOL_ITERATIONS}) reached, forcing synthesis`);
+
+                // Do one final API call without tools, with a synthesis instruction
+                // appended to the last user message so Claude reads its tool results
+                // and produces a complete answer instead of setting up another tool call
+                const synthesisMessages: Anthropic.MessageParam[] = [
+                  ...conversationMessages.slice(0, -1), // everything except last user msg
+                  {
+                    role: 'user',
+                    content: [
+                      ...toolResultsContent,
+                      { type: 'text' as const, text: 'Now synthesize all the data above into a complete, well-structured response for the user. Do not call any more tools.' }
+                    ]
+                  }
+                ];
+
+                const synthesisStream = anthropic.messages.stream({
+                  model: 'claude-sonnet-4-20250514',
+                  max_tokens: 4096,
+                  system: systemPrompt,
+                  messages: synthesisMessages
+                });
+
+                synthesisStream.on('text', (textDelta) => {
+                  accumulatedText += textDelta;
+                  controller.enqueue(encoder.encode(sseEvent('text_delta', { text: textDelta })));
+                });
+
+                const synthMessage = await synthesisStream.finalMessage();
+                if (synthMessage.usage) {
+                  totalUsage.input_tokens += synthMessage.usage.input_tokens;
+                  totalUsage.output_tokens += synthMessage.usage.output_tokens;
+                }
+
+                continueLoop = false;
+              }
             } else {
               // stop_reason is 'end_turn' or other — we're done
               continueLoop = false;
@@ -224,45 +302,80 @@ export async function POST(request: NextRequest) {
           recordRequest(clientIP);
           recordTokenUsage(totalUsage.input_tokens, totalUsage.output_tokens);
 
-          // Generate suggested follow-up queries
-          const suggestedQueries = generateSuggestedQueries(accumulatedText, toolResults);
-
           const evaluationEnabled = process.env.ENABLE_EVALUATION !== 'false';
+          const suggestionsEnabled = !!process.env.GEMINI_API_KEY;
 
-          // Emit done event with metadata
+          // Emit done event with metadata (suggestions will arrive separately)
           controller.enqueue(encoder.encode(sseEvent('done', {
-            suggestedQueries,
             usage: {
               inputTokens: totalUsage.input_tokens,
               outputTokens: totalUsage.output_tokens
             },
-            evaluating: evaluationEnabled
+            evaluating: evaluationEnabled,
+            suggestionsLoading: suggestionsEnabled
           })));
 
-          // Await evaluation with timeout, then emit result before closing
-          if (evaluationEnabled) {
-            const TIMEOUT = Symbol('timeout');
-            try {
-              const evaluation = await Promise.race([
-                evaluateResponse(
-                  latestUserMessage.content,
-                  accumulatedText,
-                  toolResults.join('\n')
-                ),
-                new Promise<typeof TIMEOUT>(resolve => setTimeout(() => resolve(TIMEOUT), 10_000))
-              ]);
-              if (evaluation === TIMEOUT) {
-                console.warn('Evaluation timed out after 10s');
-              } else if (evaluation) {
-                controller.enqueue(encoder.encode(sseEvent('evaluation', evaluation)));
-              } else {
-                console.warn('Evaluation returned null (parse failure or missing API key)');
+          // Helper for timeout handling
+          const TIMEOUT = Symbol('timeout');
+          const geminiTimeout = <T>(p: Promise<T>, ms: number) =>
+            Promise.race([p, new Promise<typeof TIMEOUT>(r => setTimeout(() => r(TIMEOUT), ms))]);
+
+          const tasks: Promise<void>[] = [];
+
+          // Suggestions task (15s timeout — simpler prompt, should be fast)
+          if (suggestionsEnabled) {
+            tasks.push((async () => {
+              try {
+                const result = await geminiTimeout(
+                  generateSuggestedQueriesWithLLM(latestUserMessage.content, accumulatedText, toolNames),
+                  15_000
+                );
+                // generateSuggestedQueriesWithLLM returns validated suggestions (guardrail Layer B applied internally)
+                // If result is empty after validation, it returns null
+                if (result !== TIMEOUT && result && result.length > 0) {
+                  controller.enqueue(encoder.encode(sseEvent('suggested_queries', { suggestions: result })));
+                } else {
+                  // Fallback to pattern matching (guaranteed safe)
+                  const fallback = generateSuggestedQueries(accumulatedText, toolResults);
+                  controller.enqueue(encoder.encode(sseEvent('suggested_queries', { suggestions: fallback })));
+                }
+              } catch {
+                const fallback = generateSuggestedQueries(accumulatedText, toolResults);
+                controller.enqueue(encoder.encode(sseEvent('suggested_queries', { suggestions: fallback })));
               }
-            } catch (err) {
-              console.error('Evaluation error:', err);
-              // Non-critical — don't emit error event
-            }
+            })());
           }
+
+          // Evaluation task (30s timeout — unchanged logic)
+          if (evaluationEnabled) {
+            tasks.push((async () => {
+              try {
+                // Truncate tool results for evaluation to keep Gemini prompt reasonable
+                const evalToolResults = toolResults.join('\n').slice(0, 10_000);
+                const evaluation = await geminiTimeout(
+                  evaluateResponse(
+                    latestUserMessage.content,
+                    accumulatedText,
+                    evalToolResults
+                  ),
+                  30_000
+                );
+                if (evaluation === TIMEOUT) {
+                  console.warn('Evaluation timed out after 30s');
+                } else if (evaluation) {
+                  controller.enqueue(encoder.encode(sseEvent('evaluation', evaluation)));
+                } else {
+                  console.warn('Evaluation returned null (parse failure or missing API key)');
+                }
+              } catch (err) {
+                console.error('Evaluation error:', err);
+                // Non-critical — don't emit error event
+              }
+            })());
+          }
+
+          // Wait for both tasks to complete (neither blocks the other)
+          await Promise.allSettled(tasks);
 
           controller.close();
         } catch (error) {
@@ -355,6 +468,126 @@ function generateSuggestedQueries(
   }
 
   return suggestions.slice(0, 3);
+}
+
+// Layer 2: Summarize tool results to reduce tokens sent back to Claude.
+// The full unsummarized result is still stored in toolResults[] for evaluation.
+const ESSENTIAL_SCHOOL_FIELDS = [
+  'dbn', 'name', 'borough', 'impact_score', 'performance_score',
+  'economic_need_index', 'enrollment', 'category', 'is_charter'
+] as const;
+
+function pickEssentialFields(school: Record<string, unknown>): Record<string, unknown> {
+  const picked: Record<string, unknown> = {};
+  for (const key of ESSENTIAL_SCHOOL_FIELDS) {
+    if (key in school) {
+      picked[key] = school[key];
+    }
+  }
+  return picked;
+}
+
+function summarizeSchoolProfile(profile: Record<string, unknown>): Record<string, unknown> {
+  const summarized: Record<string, unknown> = {};
+
+  // Keep school basics
+  if (profile.school) {
+    summarized.school = pickEssentialFields(profile.school as Record<string, unknown>);
+  }
+
+  // Keep only essential metrics from current/previous years
+  if (profile.metrics) {
+    const metrics = profile.metrics as Record<string, unknown>;
+    const summarizeMetrics = (m: Record<string, unknown> | undefined) => {
+      if (!m) return undefined;
+      return pickEssentialFields(m);
+    };
+    summarized.metrics = {
+      current: summarizeMetrics(metrics.current as Record<string, unknown> | undefined),
+      previous: summarizeMetrics(metrics.previous as Record<string, unknown> | undefined),
+    };
+  }
+
+  // Keep scalar flags
+  if ('isPersistentGem' in profile) summarized.isPersistentGem = profile.isPersistentGem;
+
+  // Summarize similar schools
+  if (Array.isArray(profile.similarSchools)) {
+    summarized.similarSchools = (profile.similarSchools as Record<string, unknown>[]).map(pickEssentialFields);
+  }
+
+  // Keep only latest year budget/suspension/pta totals
+  if (Array.isArray(profile.budgets) && (profile.budgets as Record<string, unknown>[]).length > 0) {
+    const latest = (profile.budgets as Record<string, unknown>[])[0];
+    summarized.latest_budget = {
+      year: latest.year,
+      total_budget_allocation: latest.total_budget_allocation,
+      pct_funded: latest.pct_funded,
+    };
+  }
+  if (Array.isArray(profile.suspensions) && (profile.suspensions as Record<string, unknown>[]).length > 0) {
+    const latest = (profile.suspensions as Record<string, unknown>[])[0];
+    summarized.latest_suspensions = {
+      year: latest.year,
+      total_suspensions: latest.total_suspensions,
+    };
+  }
+  if (Array.isArray(profile.pta) && (profile.pta as Record<string, unknown>[]).length > 0) {
+    const latest = (profile.pta as Record<string, unknown>[])[0];
+    summarized.latest_pta = {
+      year: latest.year,
+      total_income: latest.total_income,
+      total_expenses: latest.total_expenses,
+    };
+  }
+
+  // Keep location basics
+  if (profile.location) {
+    const loc = profile.location as Record<string, unknown>;
+    summarized.location = {
+      address: loc.address,
+      borough: loc.city,
+      nta: loc.nta,
+      grades_served: loc.grades_served,
+    };
+  }
+
+  return summarized;
+}
+
+function summarizeForConversation(toolName: string, result: Record<string, unknown>): Record<string, unknown> {
+  switch (toolName) {
+    case 'search_schools': {
+      const schools = result.schools as Record<string, unknown>[] | undefined;
+      return {
+        ...result,
+        schools: schools?.map(pickEssentialFields),
+      };
+    }
+    case 'get_curated_lists': {
+      const schools = result.schools as Record<string, unknown>[] | undefined;
+      return {
+        ...result,
+        schools: schools?.map(pickEssentialFields),
+      };
+    }
+    case 'find_similar_schools': {
+      const similarSchools = result.similar_schools as Record<string, unknown>[] | undefined;
+      return {
+        ...result,
+        similar_schools: similarSchools?.map(pickEssentialFields),
+      };
+    }
+    case 'get_school_profile': {
+      const profile = result.profile as Record<string, unknown> | null;
+      return {
+        profile: profile ? summarizeSchoolProfile(profile) : null,
+        _context: result._context,
+      };
+    }
+    default:
+      return result;
+  }
 }
 
 // GET handler for health check

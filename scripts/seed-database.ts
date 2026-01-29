@@ -7,7 +7,8 @@
  *   npx tsx scripts/seed-database.ts
  *
  * Data sources:
- *   - School Quality Reports (EMS, HS, HST, EC, D75) for 2023-24 and 2024-25
+ *   - School Quality Reports (EMS, HS, HST, EC, D75) for 2022-23, 2023-24, and 2024-25
+ *     Note: 2022-23 does not include Impact/Performance scores (added in 2023-24)
  *   - PTA Financial Reporting (2022-23, 2023-24, 2024-25)
  *   - LCGMS School Location Data + ShapePoints (lat/long)
  *   - LL16 Budget Reports (2022-23, 2023-24, 2024-25)
@@ -52,6 +53,12 @@ const REPORT_FILES: ReportConfig[] = [
   { file: '202324-hst-sqr-results.xlsx', year: '2023-24', type: 'HST' },
   { file: '202324-ec-sqr-results.xlsx', year: '2023-24', type: 'EC' },
   { file: '202324-d75-sqr-results.xlsx', year: '2023-24', type: 'D75' },
+  // 2022-23 (no Impact/Performance scores - added in 2023-24)
+  { file: '202223-ems-sqr-results.xlsx', year: '2022-23', type: 'EMS' },
+  { file: '202223-hs-sqr-results.xlsx', year: '2022-23', type: 'HS' },
+  { file: '202223-hst-sqr-results.xlsx', year: '2022-23', type: 'HST' },
+  { file: '202223-ec-sqr-results.xlsx', year: '2022-23', type: 'EC' },
+  { file: '202223-d75-sqr-results.xlsx', year: '2022-23', type: 'D75' },
 ];
 
 const PTA_FILES = [
@@ -371,6 +378,11 @@ class DataPipeline {
     }
 
     // Find which columns we need
+    // Note: Rating column names changed between 2022-23 and 2023-24+
+    // We merge them into the same database columns for trend analysis:
+    //   - "Rigorous Instruction Rating" (2022-23) → "Instruction and Performance - Rating" (2023-24+)
+    //   - "Supportive Environment Rating" (2022-23) → "Safety and School Climate - Rating" (2023-24+)
+    //   - "Strong Family-Community Ties Rating" (2022-23) → "Relationships with Families - Rating" (2023-24+)
     const colMap: Record<string, number> = {};
     for (let c = 0; c < headers.length; c++) {
       const h = headers[c];
@@ -381,15 +393,16 @@ class DataPipeline {
       else if (h === 'Impact Score') colMap['impact_score'] = c;
       else if (h === 'Performance Score') colMap['performance_score'] = c;
       else if (h === 'Economic Need Index') colMap['economic_need_index'] = c;
-      else if (h === 'Rigorous Instruction Rating') colMap['rating_instruction'] = c;
-      else if (h === 'Supportive Environment Rating') colMap['rating_safety'] = c;
-      else if (h === 'Strong Family-Community Ties Rating') colMap['rating_families'] = c;
+      // Rating columns - handle both 2022-23 and 2023-24+ naming conventions
+      else if (h === 'Rigorous Instruction Rating' || h === 'Instruction and Performance - Rating') colMap['rating_instruction'] = c;
+      else if (h === 'Supportive Environment Rating' || h === 'Safety and School Climate - Rating') colMap['rating_safety'] = c;
+      else if (h === 'Strong Family-Community Ties Rating' || h === 'Relationships with Families - Rating') colMap['rating_families'] = c;
       else if (h === 'Student Attendance Rate') colMap['student_attendance'] = c;
       else if (h === 'Teacher Attendance Rate') colMap['teacher_attendance'] = c;
       else if (h === 'Years Principal') colMap['principal_years'] = c;
-      else if (h === 'Percent ELL') colMap['pct_ell'] = c;
-      else if (h === 'Percent Students with Disabilities') colMap['pct_iep'] = c;
-      else if (h === 'Percent in Temporary Housing') colMap['pct_temp_housing'] = c;
+      else if (h === 'Percent ELL' || h === 'Percent English Language Learners') colMap['pct_ell'] = c;
+      else if (h === 'Percent Students with Disabilities' || h === 'Percent Students with IEPs') colMap['pct_iep'] = c;
+      else if (h === 'Percent in Temporary Housing' || h === 'Percent in Temp Housing') colMap['pct_temp_housing'] = c;
       else if (h === 'Percent HRA Eligible') colMap['pct_hra_eligible'] = c;
       else if (h.includes('Teacher') && h.includes('3')) colMap['pct_teachers_3plus_years'] = c;
       else if (h === 'Rigorous Instruction - Percent Positive') colMap['survey_instruction'] = c;
@@ -851,7 +864,7 @@ class DataPipeline {
   computeCitywideStats(): void {
     console.log('Computing citywide statistics...');
 
-    const years = ['2023-24', '2024-25'];
+    const years = ['2022-23', '2023-24', '2024-25'];
 
     const insertStats = this.db.prepare(`
       INSERT OR REPLACE INTO citywide_stats (

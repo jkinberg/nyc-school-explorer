@@ -9,6 +9,7 @@ interface SuggestedQueriesProps {
   queries: SuggestedQuery[];
   onSelect: (query: string) => void;
   compact?: boolean;
+  loading?: boolean;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -18,8 +19,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   visualize: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50',
 };
 
-export function SuggestedQueries({ queries, onSelect, compact }: SuggestedQueriesProps) {
-  if (queries.length === 0) return null;
+// Skeleton widths to approximate real suggestion lengths
+const SKELETON_WIDTHS = [130, 160, 190];
+
+export function SuggestedQueries({ queries, onSelect, compact, loading }: SuggestedQueriesProps) {
+  // Show skeleton when loading, hide when not loading and no queries
+  if (!loading && queries.length === 0) return null;
 
   return (
     <div className={compact ? '' : 'space-y-2'}>
@@ -29,17 +34,28 @@ export function SuggestedQueries({ queries, onSelect, compact }: SuggestedQuerie
         </p>
       )}
       <div className={`flex flex-wrap gap-2 ${compact ? 'justify-start' : 'justify-center'}`}>
-        {queries.map((query, index) => (
-          <button
-            key={index}
-            onClick={() => onSelect(query.text)}
-            className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-              CATEGORY_COLORS[query.category] || CATEGORY_COLORS.explore
-            }`}
-          >
-            {query.text}
-          </button>
-        ))}
+        {loading ? (
+          // Skeleton pills while loading
+          SKELETON_WIDTHS.map((width, index) => (
+            <div
+              key={index}
+              className="h-9 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"
+              style={{ width: `${width}px` }}
+            />
+          ))
+        ) : (
+          queries.map((query, index) => (
+            <button
+              key={index}
+              onClick={() => onSelect(query.text)}
+              className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                CATEGORY_COLORS[query.category] || CATEGORY_COLORS.explore
+              }`}
+            >
+              {query.text}
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

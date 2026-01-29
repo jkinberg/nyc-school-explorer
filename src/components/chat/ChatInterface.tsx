@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { SuggestedQueries } from './SuggestedQueries';
 import { generateId } from '@/lib/utils/formatting';
-import type { EvaluationResult } from '@/types/chat';
+import type { EvaluationResult, ChartData } from '@/types/chat';
 
 interface Message {
   id: string;
@@ -15,6 +15,7 @@ interface Message {
   isStreaming?: boolean;
   isEvaluating?: boolean;
   evaluation?: EvaluationResult;
+  charts?: ChartData[];
 }
 
 interface SuggestedQuery {
@@ -72,6 +73,7 @@ export function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestedQueries, setSuggestedQueries] = useState<SuggestedQuery[]>(INITIAL_SUGGESTIONS);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -190,18 +192,38 @@ export function ChatInterface() {
               // Tool finished — continue waiting for text
               break;
 
-            case 'done': {
-              const queries = event.data.suggestedQueries as SuggestedQuery[] | undefined;
-              if (queries && queries.length > 0) {
-                setSuggestedQueries(queries);
+            case 'chart_data': {
+              // Layer 1: Receive full chart data sent separately from Claude's conversation
+              const chartData = event.data as { toolUseId: string; chart: ChartData; _context: unknown };
+              if (chartData.chart) {
+                setMessages(prev => prev.map(m =>
+                  m.id === loadingId
+                    ? { ...m, charts: [...(m.charts || []), chartData.chart] }
+                    : m
+                ));
               }
+              break;
+            }
+
+            case 'done': {
               const evaluating = event.data.evaluating as boolean;
+              const loadingSuggestions = event.data.suggestionsLoading as boolean;
               // Mark streaming complete, set evaluating state
               setMessages(prev => prev.map(m =>
                 m.id === loadingId
                   ? { ...m, isStreaming: false, isEvaluating: evaluating === true }
                   : m
               ));
+              setSuggestionsLoading(loadingSuggestions === true);
+              break;
+            }
+
+            case 'suggested_queries': {
+              const suggestions = event.data.suggestions as SuggestedQuery[];
+              if (suggestions?.length > 0) {
+                setSuggestedQueries(suggestions);
+              }
+              setSuggestionsLoading(false);
               break;
             }
 
@@ -221,10 +243,11 @@ export function ChatInterface() {
         }
       }
 
-      // Clean up isEvaluating in case evaluation timed out
+      // Clean up isEvaluating and suggestionsLoading in case they timed out
       setMessages(prev => prev.map(m =>
         m.id === loadingId && m.isEvaluating ? { ...m, isEvaluating: false } : m
       ));
+      setSuggestionsLoading(false);
 
     } catch (err) {
       console.error('Chat error:', err);
@@ -287,6 +310,7 @@ export function ChatInterface() {
                   queries={suggestedQueries}
                   onSelect={handleSuggestionClick}
                   compact
+                  loading={suggestionsLoading}
                 />
               </div>
             )}
