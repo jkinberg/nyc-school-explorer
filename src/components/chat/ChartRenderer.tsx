@@ -12,21 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-
-interface ChartData {
-  type: 'scatter' | 'bar' | 'histogram';
-  title: string;
-  xAxis: {
-    label: string;
-    dataKey: string;
-  };
-  yAxis: {
-    label: string;
-    dataKey: string;
-  };
-  data: Record<string, unknown>[];
-  colorBy?: string;
-}
+import type { ChartData } from '@/types/chat';
 
 interface ChartRendererProps {
   chart: ChartData;

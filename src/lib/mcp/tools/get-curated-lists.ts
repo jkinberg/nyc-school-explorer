@@ -40,13 +40,20 @@ export function getCuratedListsTool(params: GetCuratedListsParams): GetCuratedLi
     borough,
     report_type = 'EMS', // Default to EMS - the scope of the original analysis
     sort_by = 'impact_score',
-    limit = 50
+    limit = 20
   } = params;
 
   const citywideStats = getCitywideStats('2024-25');
 
   // Determine effective report type for queries
   const effectiveReportType = report_type === 'all' ? 'all' : report_type;
+
+  // Map list_type (plural) to database category name (singular)
+  const DB_CATEGORY: Record<string, string> = {
+    hidden_gems: 'hidden_gem',
+    anomalies: 'anomaly',
+    elite: 'elite',
+  };
 
   let schools: SchoolWithMetrics[];
 
@@ -59,7 +66,8 @@ export function getCuratedListsTool(params: GetCuratedListsParams): GetCuratedLi
     const gems = getSchoolsByCategory('hidden_gem', '2024-25', 200, effectiveReportType);
     schools = [...elite, ...gems];
   } else {
-    schools = getSchoolsByCategory(list_type, '2024-25', 200, effectiveReportType);
+    const dbCategory = DB_CATEGORY[list_type] || list_type;
+    schools = getSchoolsByCategory(dbCategory, '2024-25', 200, effectiveReportType);
   }
 
   // Apply borough filter
@@ -188,7 +196,7 @@ Use this for the Hidden Gems feature page or when users ask about "schools beati
       },
       limit: {
         type: 'number',
-        default: 50,
+        default: 20,
         description: 'Maximum number of results'
       }
     },

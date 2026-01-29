@@ -1,7 +1,8 @@
 'use client';
 
 import { ConfidenceBadge } from './ConfidenceBadge';
-import type { EvaluationResult } from '@/types/chat';
+import { ChartRenderer } from './ChartRenderer';
+import type { EvaluationResult, ChartData } from '@/types/chat';
 
 interface Message {
   id: string;
@@ -12,6 +13,7 @@ interface Message {
   isStreaming?: boolean;
   isEvaluating?: boolean;
   evaluation?: EvaluationResult;
+  charts?: ChartData[];
 }
 
 interface MessageBubbleProps {
@@ -164,6 +166,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               {message.isStreaming && (
                 <span className="inline-block w-1.5 h-4 bg-gray-400 dark:bg-gray-500 animate-pulse ml-0.5 align-text-bottom" />
               )}
+            </>
+          )}
+          {message.charts && message.charts.length > 0 && (
+            <>
+              {message.charts.map((chart, idx) => (
+                <ChartRenderer key={idx} chart={chart} />
+              ))}
             </>
           )}
         </div>

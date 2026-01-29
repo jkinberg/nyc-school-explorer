@@ -45,7 +45,7 @@ export function generateChartTool(params: GenerateChartParams): GenerateChartRes
     filter,
     title,
     year = '2024-25',
-    limit = 500
+    limit = 200
   } = params;
 
   const citywideStats = getCitywideStats(year);
@@ -209,7 +209,7 @@ Returns structured data for client-side rendering with Recharts, not images.`,
       },
       limit: {
         type: 'number',
-        default: 500,
+        default: 200,
         maximum: 1000,
         description: 'Maximum data points'
       }

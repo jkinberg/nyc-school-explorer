@@ -47,7 +47,7 @@ IMPORTANT USAGE GUIDANCE:
           description: 'Filter by pre-computed category'
         },
         year: { type: 'string', enum: ['2023-24', '2024-25'], default: '2024-25' },
-        limit: { type: 'number', default: 25, maximum: 100 },
+        limit: { type: 'number', default: 10, maximum: 100 },
         min_pct_funded: { type: 'number', description: 'Minimum FSF % funded (0-1)' },
         max_pct_funded: { type: 'number', description: 'Maximum FSF % funded (0-1)' },
         council_district: { type: 'number', description: 'NYC Council district number' },
@@ -120,7 +120,7 @@ IMPORTANT USAGE GUIDANCE:
         y_metric: { type: 'string', description: 'Required for scatter plots' },
         color_by: { type: 'string', enum: ['category', 'borough', 'is_charter'] },
         title: { type: 'string' },
-        limit: { type: 'number', default: 500 }
+        limit: { type: 'number', default: 200 }
       },
       required: ['chart_type', 'x_metric']
     }
@@ -151,7 +151,7 @@ IMPORTANT USAGE GUIDANCE:
         },
         borough: { type: 'string', enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'] },
         sort_by: { type: 'string', enum: ['impact_score', 'name', 'enrollment'], default: 'impact_score' },
-        limit: { type: 'number', default: 50 }
+        limit: { type: 'number', default: 20 }
       },
       required: ['list_type']
     }

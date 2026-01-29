@@ -34,7 +34,7 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 - **Framework**: Next.js 16 with App Router
 - **Language**: TypeScript
 - **Database**: SQLite with better-sqlite3
-- **AI**: Anthropic Claude API (claude-sonnet-4-20250514 for chat, claude-haiku-3-20240307 for evaluation)
+- **AI**: Anthropic Claude API (claude-sonnet-4-20250514 for chat), Google Gemini (gemini-3-flash-preview for evaluation)
 - **Charts**: Recharts
 - **Styling**: Tailwind CSS 4
 
@@ -42,7 +42,8 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | -- | Anthropic API key for chat and evaluation |
+| `ANTHROPIC_API_KEY` | Yes | -- | Anthropic API key for chat |
+| `GEMINI_API_KEY` | No | -- | Google Gemini API key for LLM-as-judge evaluation |
 | `ENABLE_EVALUATION` | No | `true` | Set to `false` to disable LLM-as-judge response scoring |
 | `RATE_LIMIT_ENABLED` | No | `true` | Set to `false` to disable rate limiting |
 

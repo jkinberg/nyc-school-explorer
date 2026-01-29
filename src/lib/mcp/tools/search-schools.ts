@@ -39,7 +39,7 @@ export interface SearchSchoolsResult {
  */
 export function searchSchoolsTool(params: SearchSchoolsParams): SearchSchoolsResult {
   const year = params.year || '2024-25';
-  const limit = Math.min(params.limit || 25, 100);
+  const limit = Math.min(params.limit || 10, 100);
 
   // Map parameters to query format
   const queryParams = {
@@ -189,7 +189,7 @@ This tool always returns both Impact Score AND Performance Score together with E
       },
       limit: {
         type: 'number',
-        default: 25,
+        default: 10,
         maximum: 100,
         description: 'Maximum number of results to return'
       },

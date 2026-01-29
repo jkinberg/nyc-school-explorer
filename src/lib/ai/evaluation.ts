@@ -1,5 +1,5 @@
 import type { EvaluationResult } from '@/types/chat';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI, Type } from '@google/genai';
 
 /**
  * LLM-as-judge evaluation system for response quality.
@@ -92,43 +92,53 @@ export async function evaluateResponse(
   assistantResponse: string,
   toolResults?: string
 ): Promise<EvaluationResult | null> {
-  // Skip evaluation if no API key or in development
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // Skip evaluation if no API key
+  if (!process.env.GEMINI_API_KEY) {
     return null;
   }
 
   try {
-    const client = new Anthropic();
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     const prompt = EVALUATION_PROMPT
       .replace('{user_query}', userQuery)
       .replace('{assistant_response}', assistantResponse)
       .replace('{tool_results}', toolResults || 'None');
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-3-20240307',
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            scores: {
+              type: Type.OBJECT,
+              properties: {
+                factual_accuracy: { type: Type.INTEGER },
+                context_inclusion: { type: Type.INTEGER },
+                limitation_acknowledgment: { type: Type.INTEGER },
+                responsible_framing: { type: Type.INTEGER },
+                query_relevance: { type: Type.INTEGER },
+              },
+              required: ['factual_accuracy', 'context_inclusion', 'limitation_acknowledgment', 'responsible_framing', 'query_relevance'],
+            },
+            weighted_score: { type: Type.NUMBER },
+            flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            summary: { type: Type.STRING },
+          },
+          required: ['scores', 'weighted_score', 'flags', 'summary'],
+        },
+      },
     });
 
-    // Extract text from response
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
+    const text = response.text;
+    if (!text) {
       return null;
     }
 
-    // Parse JSON response
-    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return null;
-    }
-
-    const result = JSON.parse(jsonMatch[0]) as EvaluationResult;
+    const result = JSON.parse(text) as EvaluationResult;
 
     // Validate the result structure
     if (!result.scores || typeof result.weighted_score !== 'number') {

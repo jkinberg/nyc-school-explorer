@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@google/genai": "^1.38.0",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "better-sqlite3": "^12.6.2",
     "dbffile": "^1.12.0",
