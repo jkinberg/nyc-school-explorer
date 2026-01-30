@@ -63,7 +63,7 @@ export function getSchoolProfileTool(params: GetSchoolProfileParams): GetSchoolP
 
     if (profile.isPersistentGem) {
       limitations.push(
-        'Persistent gem status suggests consistency, but cannot determine causation'
+        'Persistent high growth status suggests consistency, but cannot determine causation'
       );
     }
 

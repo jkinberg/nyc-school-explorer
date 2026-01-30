@@ -76,7 +76,7 @@ Schools are categorized based on three thresholds (computed during data import):
 | **Strong Growth, Building Outcomes** | >= 0.55 | < 0.50 | >= 0.85 |
 | **Strong Outcomes, Moderate Growth** | < 0.55 | >= 0.50 | >= 0.85 |
 | **Developing on Both Metrics** | < 0.55 | < 0.50 | >= 0.85 |
-| **Below Poverty Threshold** | any | any | < 0.85 |
+| **Lower Economic Need** | any | any | < 0.85 |
 
 - **Impact Score**: Measures student growth relative to similar students (less correlated with poverty)
 - **Performance Score**: Measures absolute outcomes (strongly correlated with poverty, r = -0.69)

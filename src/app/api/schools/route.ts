@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const params = {
+      query: searchParams.get('q') || undefined,
       borough: searchParams.get('borough') || undefined,
       reportType: searchParams.get('report_type') || undefined,
       minImpactScore: searchParams.get('min_impact')

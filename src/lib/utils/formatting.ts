@@ -72,7 +72,7 @@ export function formatCategory(category: string | null): string {
     high_growth: 'Strong Growth, Building Outcomes',
     high_achievement: 'Strong Outcomes, Moderate Growth',
     developing: 'Developing on Both Metrics',
-    below_threshold: 'Below Poverty Threshold'
+    below_threshold: 'Lower Economic Need'
   };
 
   return labels[category] || category;

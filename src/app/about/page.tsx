@@ -182,7 +182,7 @@ export default function AboutPage() {
           </table>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-          Schools with ENI below 0.85 are classified as &quot;Below Poverty Threshold&quot; and excluded from this framework.
+          Schools with ENI below 0.85 are classified as &quot;Lower Economic Need&quot; and excluded from this framework.
         </p>
 
         <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSchoolProfile } from '@/lib/db/queries';
 import { MetricDisplay, MetricComparison } from '@/components/schools/MetricDisplay';
 import { SchoolCard } from '@/components/schools/SchoolCard';
+import { SchoolMap } from '@/components/schools/SchoolMap';
 import { LimitationsBanner } from '@/components/common/LimitationsBanner';
 import { formatCategory, formatCurrency } from '@/lib/utils/formatting';
 
@@ -67,7 +68,7 @@ export default async function SchoolPage({ params }: PageProps) {
           )}
           {isPersistentGem && (
             <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-              Persistent Gem
+              Persistent High Growth
             </span>
           )}
         </div>
@@ -76,6 +77,77 @@ export default async function SchoolPage({ params }: PageProps) {
           {school.is_charter && ' · Charter School'}
         </p>
       </div>
+
+      {/* Location */}
+      {location && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Location
+          </h2>
+
+          {/* Map */}
+          {location.latitude && location.longitude && (
+            <div className="mb-4">
+              <SchoolMap
+                latitude={location.latitude}
+                longitude={location.longitude}
+                schoolName={school.name}
+              />
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            {location.address && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Address:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {location.address}, {location.city}, {location.state} {location.zip}
+                </span>
+              </div>
+            )}
+            {location.grades_final_text && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Grades Served:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {location.grades_final_text}
+                </span>
+              </div>
+            )}
+            {location.principal_name && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Principal:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {location.principal_name}
+                </span>
+              </div>
+            )}
+            {location.phone && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Phone:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {location.phone}
+                </span>
+              </div>
+            )}
+            {location.nta && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Neighborhood:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {location.nta}
+                </span>
+              </div>
+            )}
+            {location.council_district && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Council District:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {location.council_district}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Key Metrics */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
@@ -279,81 +351,6 @@ export default async function SchoolPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Location */}
-      {location && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Location
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
-            {location.address && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Address:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.address}, {location.city}, {location.state} {location.zip}
-                </span>
-              </div>
-            )}
-            {location.grades_final_text && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Grades Served:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.grades_final_text}
-                </span>
-              </div>
-            )}
-            {location.principal_name && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Principal:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.principal_name}
-                </span>
-              </div>
-            )}
-            {location.phone && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Phone:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.phone}
-                </span>
-              </div>
-            )}
-            {location.nta && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Neighborhood:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.nta}
-                </span>
-              </div>
-            )}
-            {location.council_district && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Council District:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.council_district}
-                </span>
-              </div>
-            )}
-            {location.building_code && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Building Code:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.building_code}
-                </span>
-              </div>
-            )}
-            {location.managed_by && (
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Managed By:</span>{' '}
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {location.managed_by}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Budget */}
       {budgets.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
@@ -391,6 +388,42 @@ export default async function SchoolPage({ params }: PageProps) {
               Note: Charter school budget data is not directly comparable to DOE-managed school budgets.
             </p>
           )}
+        </div>
+      )}
+
+      {/* PTA Financial */}
+      {pta.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            PTA Financial Summary
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                  <th className="pb-2 pr-4">Year</th>
+                  <th className="pb-2 pr-4">Beginning Balance</th>
+                  <th className="pb-2 pr-4">Income</th>
+                  <th className="pb-2 pr-4">Expenses</th>
+                  <th className="pb-2">Ending Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pta.map((p) => (
+                  <tr key={p.year} className="border-b border-gray-100 dark:border-gray-700/50">
+                    <td className="py-2 pr-4 font-medium text-gray-900 dark:text-white">{p.year}</td>
+                    <td className="py-2 pr-4 text-gray-900 dark:text-white">{formatCurrency(p.beginning_balance)}</td>
+                    <td className="py-2 pr-4 text-gray-900 dark:text-white">{formatCurrency(p.total_income)}</td>
+                    <td className="py-2 pr-4 text-gray-900 dark:text-white">{formatCurrency(p.total_expenses)}</td>
+                    <td className="py-2 text-gray-900 dark:text-white">{formatCurrency(p.ending_balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            PTA income primarily reflects parent wealth, not school quality. Some schools have very active PTAs while others raise very little.
+          </p>
         </div>
       )}
 
@@ -434,42 +467,6 @@ export default async function SchoolPage({ params }: PageProps) {
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
             &quot;Redacted&quot; indicates small counts (1-5) suppressed for privacy. Suspension data reflects systemic patterns as much as individual school decisions. Always consider ENI context.
-          </p>
-        </div>
-      )}
-
-      {/* PTA Financial */}
-      {pta.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            PTA Financial Summary
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                  <th className="pb-2 pr-4">Year</th>
-                  <th className="pb-2 pr-4">Beginning Balance</th>
-                  <th className="pb-2 pr-4">Income</th>
-                  <th className="pb-2 pr-4">Expenses</th>
-                  <th className="pb-2">Ending Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pta.map((p) => (
-                  <tr key={p.year} className="border-b border-gray-100 dark:border-gray-700/50">
-                    <td className="py-2 pr-4 font-medium text-gray-900 dark:text-white">{p.year}</td>
-                    <td className="py-2 pr-4 text-gray-900 dark:text-white">{formatCurrency(p.beginning_balance)}</td>
-                    <td className="py-2 pr-4 text-gray-900 dark:text-white">{formatCurrency(p.total_income)}</td>
-                    <td className="py-2 pr-4 text-gray-900 dark:text-white">{formatCurrency(p.total_expenses)}</td>
-                    <td className="py-2 text-gray-900 dark:text-white">{formatCurrency(p.ending_balance)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-            PTA income primarily reflects parent wealth, not school quality. Some schools have very active PTAs while others raise very little.
           </p>
         </div>
       )}

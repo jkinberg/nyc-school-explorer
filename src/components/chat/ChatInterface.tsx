@@ -28,6 +28,10 @@ interface SSEEvent {
   data: Record<string, unknown>;
 }
 
+interface ChatInterfaceProps {
+  initialQuery?: string;
+}
+
 const INITIAL_SUGGESTIONS: SuggestedQuery[] = [
   { text: 'Show me high growth schools in the Bronx', category: 'explore' },
   { text: 'What does Impact Score measure?', category: 'explain' },
@@ -68,7 +72,7 @@ function parseSSEEvents(buffer: string): { parsed: SSEEvent[]; remaining: string
   return { parsed, remaining };
 }
 
-export function ChatInterface() {
+export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +82,7 @@ export function ChatInterface() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const initialQuerySentRef = useRef(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -259,6 +264,14 @@ export function ChatInterface() {
       setIsLoading(false);
     }
   }, [messages, isLoading]);
+
+  // Send initial query on mount
+  useEffect(() => {
+    if (initialQuery && !initialQuerySentRef.current) {
+      initialQuerySentRef.current = true;
+      sendMessage(initialQuery);
+    }
+  }, [initialQuery, sendMessage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

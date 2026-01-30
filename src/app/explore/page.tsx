@@ -1,14 +1,24 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 
-export const metadata = {
-  title: 'AI Explore | NYC School Explorer',
-  description: 'Explore NYC school data through AI-powered natural language conversation.',
-};
+function ExploreContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') || undefined;
+
+  return (
+    <div className="h-[calc(100vh-4rem)]">
+      <ChatInterface initialQuery={initialQuery} />
+    </div>
+  );
+}
 
 export default function ExplorePage() {
   return (
-    <div className="h-[calc(100vh-4rem)]">
-      <ChatInterface />
-    </div>
+    <Suspense fallback={<div className="h-[calc(100vh-4rem)] flex items-center justify-center">Loading...</div>}>
+      <ExploreContent />
+    </Suspense>
   );
 }

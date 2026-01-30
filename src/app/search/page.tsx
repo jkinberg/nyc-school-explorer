@@ -50,17 +50,20 @@ export default function SearchPage() {
   const [hasMore, setHasMore] = useState(false);
 
   // Filters
+  const [query, setQuery] = useState('');
   const [borough, setBorough] = useState('');
   const [category, setCategory] = useState('');
   const [reportType, setReportType] = useState('');
   const [minImpact, setMinImpact] = useState('');
   const [offset, setOffset] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
 
   // Fetch schools
   const fetchSchools = async (reset = false) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      if (query) params.set('q', query);
       if (borough) params.set('borough', borough);
       if (category) params.set('category', category);
       if (reportType) params.set('report_type', reportType);
@@ -91,7 +94,12 @@ export default function SearchPage() {
   // Initial load and filter changes
   useEffect(() => {
     fetchSchools(true);
-  }, [borough, category, reportType, minImpact]);
+  }, [query, borough, category, reportType, minImpact]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuery(searchInput);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -104,6 +112,34 @@ export default function SearchPage() {
           Filter NYC schools by location, type, and performance metrics.
         </p>
       </div>
+
+      {/* Search Input */}
+      <form onSubmit={handleSearch} className="mb-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by school name or DBN..."
+            className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Search
+          </button>
+          {query && (
+            <button
+              type="button"
+              onClick={() => { setQuery(''); setSearchInput(''); }}
+              className="px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </form>
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
@@ -182,7 +218,10 @@ export default function SearchPage() {
         {loading && schools.length === 0 ? (
           'Loading...'
         ) : (
-          `Showing ${schools.length} of ${totalCount} schools`
+          <>
+            Showing {schools.length} of {totalCount} schools
+            {query && <span className="ml-2 text-blue-600 dark:text-blue-400">for &quot;{query}&quot;</span>}
+          </>
         )}
       </div>
 

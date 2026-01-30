@@ -52,6 +52,7 @@ export function getLatestMetrics(dbn: string): SchoolMetrics | undefined {
 // ============================================================================
 
 export interface SearchParams {
+  query?: string;  // Search by school name or DBN
   borough?: string;
   reportType?: string;
   schoolType?: string;
@@ -81,6 +82,22 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
 
   const conditions: string[] = ['m.year = ?'];
   const values: (string | number | boolean)[] = [year];
+
+  if (params.query) {
+    // Split query into words and match all of them (fuzzy AND matching)
+    const words = params.query.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 1) {
+      // Single word: match name or DBN
+      conditions.push('(s.name LIKE ? OR s.dbn LIKE ?)');
+      const searchTerm = `%${words[0]}%`;
+      values.push(searchTerm, searchTerm);
+    } else {
+      // Multiple words: all words must appear in name (in any order)
+      const wordConditions = words.map(() => 's.name LIKE ?');
+      conditions.push(`(${wordConditions.join(' AND ')})`);
+      words.forEach(word => values.push(`%${word}%`));
+    }
+  }
 
   if (params.borough) {
     conditions.push('s.borough = ?');
@@ -191,6 +208,22 @@ export function countSchools(params: Omit<SearchParams, 'limit' | 'offset'>): nu
   const conditions: string[] = ['m.year = ?'];
   const values: (string | number | boolean)[] = [year];
 
+  if (params.query) {
+    // Split query into words and match all of them (fuzzy AND matching)
+    const words = params.query.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 1) {
+      // Single word: match name or DBN
+      conditions.push('(s.name LIKE ? OR s.dbn LIKE ?)');
+      const searchTerm = `%${words[0]}%`;
+      values.push(searchTerm, searchTerm);
+    } else {
+      // Multiple words: all words must appear in name (in any order)
+      const wordConditions = words.map(() => 's.name LIKE ?');
+      conditions.push(`(${wordConditions.join(' AND ')})`);
+      words.forEach(word => values.push(`%${word}%`));
+    }
+  }
+
   if (params.borough) {
     conditions.push('s.borough = ?');
     values.push(params.borough);
@@ -201,7 +234,15 @@ export function countSchools(params: Omit<SearchParams, 'limit' | 'offset'>): nu
     values.push(params.category);
   }
 
-  // Add other filters as needed (simplified for count)
+  if (params.reportType) {
+    conditions.push('s.report_type = ?');
+    values.push(params.reportType);
+  }
+
+  if (params.minImpactScore !== undefined) {
+    conditions.push('m.impact_score >= ?');
+    values.push(params.minImpactScore);
+  }
 
   const sql = `
     SELECT COUNT(*) as count
