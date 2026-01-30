@@ -1,0 +1,360 @@
+# MCP API Documentation
+
+The NYC School Explorer exposes an MCP (Model Context Protocol) HTTP endpoint that allows external AI agents to query school data programmatically.
+
+## Overview
+
+```
+External AI Agent (Claude Desktop, other MCP clients)
+  ↓
+POST /api/mcp (JSON-RPC 2.0)
+  ↓
+executeTool(name, params)
+  ↓
+SQLite database queries
+  ↓
+Structured JSON response
+```
+
+**Key Point:** Your Anthropic/Gemini API keys are NOT used by the MCP endpoint. It only executes database queries and returns data. External AI agents use their own LLM providers.
+
+## Endpoint
+
+```
+POST /api/mcp
+Content-Type: application/json
+```
+
+## Authentication
+
+No authentication required. Rate limited to 60 requests/minute per IP.
+
+## Protocol
+
+Uses JSON-RPC 2.0 format:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-id",
+  "method": "method-name",
+  "params": { ... }
+}
+```
+
+## Methods
+
+### `initialize`
+
+Protocol handshake. Call this first to establish connection.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "clientInfo": {
+      "name": "your-client",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "serverInfo": {
+      "name": "nyc-schools-data",
+      "version": "1.0.0"
+    },
+    "capabilities": {
+      "tools": {}
+    }
+  }
+}
+```
+
+### `tools/list`
+
+Returns all available tools.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "2",
+  "method": "tools/list",
+  "params": {}
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "2",
+  "result": {
+    "tools": [
+      {
+        "name": "search_schools",
+        "description": "Search NYC schools by various criteria...",
+        "inputSchema": { ... }
+      },
+      ...
+    ]
+  }
+}
+```
+
+### `tools/call`
+
+Execute a tool and return results.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "3",
+  "method": "tools/call",
+  "params": {
+    "name": "search_schools",
+    "arguments": {
+      "borough": "Brooklyn",
+      "limit": 5
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "3",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"schools\": [...], \"_context\": {...}}"
+      }
+    ]
+  }
+}
+```
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `search_schools` | Filter schools by borough, category, metrics |
+| `get_school_profile` | Detailed school view with trends |
+| `find_similar_schools` | Find peer schools by ENI/enrollment |
+| `analyze_correlations` | Calculate correlation between metrics |
+| `generate_chart` | Create chart data for visualization |
+| `explain_metrics` | Educational content on methodology |
+| `get_curated_lists` | Pre-computed school categories |
+
+### Tool Examples
+
+#### search_schools
+
+Find Brooklyn schools with high impact scores:
+
+```json
+{
+  "name": "search_schools",
+  "arguments": {
+    "borough": "Brooklyn",
+    "min_impact_score": 0.6,
+    "limit": 10
+  }
+}
+```
+
+#### get_school_profile
+
+Get detailed info for a specific school:
+
+```json
+{
+  "name": "get_school_profile",
+  "arguments": {
+    "dbn": "01M188"
+  }
+}
+```
+
+#### find_similar_schools
+
+Find schools similar to a reference school:
+
+```json
+{
+  "name": "find_similar_schools",
+  "arguments": {
+    "dbn": "01M188",
+    "match_criteria": ["economic_need", "enrollment"],
+    "limit": 5
+  }
+}
+```
+
+#### analyze_correlations
+
+Calculate correlation between two metrics:
+
+```json
+{
+  "name": "analyze_correlations",
+  "arguments": {
+    "metric1": "economic_need_index",
+    "metric2": "performance_score"
+  }
+}
+```
+
+#### get_curated_lists
+
+Get pre-computed school categories:
+
+```json
+{
+  "name": "get_curated_lists",
+  "arguments": {
+    "list_type": "high_growth",
+    "borough": "Bronx",
+    "limit": 10
+  }
+}
+```
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `-32700` | Parse error - Invalid JSON |
+| `-32600` | Invalid request - Missing required fields |
+| `-32601` | Method not found |
+| `-32602` | Invalid params - Unknown tool or bad arguments |
+| `-32603` | Internal error - Tool execution failed |
+| `-32002` | Rate limit exceeded |
+
+**Error Response Format:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "request-id",
+  "error": {
+    "code": -32601,
+    "message": "Method not found"
+  }
+}
+```
+
+## Rate Limiting
+
+- **Limit:** 60 requests/minute per IP
+- **Response when exceeded:** HTTP 429 with JSON-RPC error code `-32002`
+- **Retry-After:** Included in error data
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": null,
+  "error": {
+    "code": -32002,
+    "message": "Rate limit exceeded",
+    "data": {
+      "retryAfter": 45
+    }
+  }
+}
+```
+
+## Claude Desktop Configuration
+
+After deployment, add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "nyc-schools": {
+      "url": "https://nyc-school-explorer-w27tadi35a-uc.a.run.app/api/mcp"
+    }
+  }
+}
+```
+
+## Testing
+
+### List tools
+
+```bash
+curl -X POST http://localhost:3000/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tools/list","params":{}}'
+```
+
+### Call a tool
+
+```bash
+curl -X POST http://localhost:3000/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":"2","method":"tools/call","params":{"name":"search_schools","arguments":{"borough":"Brooklyn","limit":3}}}'
+```
+
+### Health check
+
+```bash
+curl http://localhost:3000/api/mcp
+```
+
+## Monitoring & Abuse Mitigation
+
+### Request Logging
+
+Each MCP request logs method, tool name (if applicable), and client IP:
+
+```
+[MCP] method=tools/call tool=search_schools ip=1.2.3.4
+```
+
+### Google Cloud Monitoring
+
+View metrics in Cloud Run Dashboard:
+- Request count
+- Latency
+- Error rate
+
+View logs:
+```bash
+gcloud run services logs read nyc-school-explorer --region=us-central1 --limit=50
+```
+
+Filter MCP requests:
+```bash
+gcloud logging read 'resource.type="cloud_run_revision" AND httpRequest.requestUrl:"/api/mcp"' \
+  --limit=100 --format="table(timestamp, httpRequest.remoteIp, httpRequest.status)"
+```
+
+### Signs of Abuse
+
+- Single IP making >100 requests/minute
+- Sudden 10x spike in request count
+- High error rate (scanning for vulnerabilities)
+
+### Response Playbook
+
+**Level 1 - Suspicious activity:** Monitor for 24 hours, rate limiting handles it.
+
+**Level 2 - Confirmed abuse (single IP):** Block via Cloud Armor or update ingress settings.
+
+**Level 3 - Widespread abuse:** Add API key authentication (code change required).

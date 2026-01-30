@@ -149,6 +149,23 @@ When querying categories:
 | `/api/schools` | GET | Search schools with query params |
 | `/api/schools/[dbn]` | GET | Get individual school profile |
 | `/api/schools/gems` | GET | Get curated lists (type=high_growth\|persistent_high_growth\|high_growth_high_achievement) |
+| `/api/mcp` | POST | MCP endpoint for external AI agents (JSON-RPC 2.0) |
+
+## MCP API
+
+The `/api/mcp` endpoint allows external AI agents (Claude Desktop, other MCP clients) to query school data programmatically.
+
+**Key features:**
+- JSON-RPC 2.0 protocol
+- Methods: `initialize`, `tools/list`, `tools/call`
+- Rate limited: 60 requests/minute per IP
+- No authentication required (database queries only, no LLM calls)
+
+**Available tools via MCP:** All tools from `src/lib/mcp/index.ts` are exposed:
+- `search_schools`, `get_school_profile`, `find_similar_schools`
+- `analyze_correlations`, `generate_chart`, `explain_metrics`, `get_curated_lists`
+
+See [docs/mcp-api.md](docs/mcp-api.md) for full documentation.
 
 ## Important Patterns
 

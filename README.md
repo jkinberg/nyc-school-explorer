@@ -55,6 +55,17 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 - LL93 Suspension Reports (2022-23 through 2024-25)
 - PTA Financial Reporting (2022-23 through 2024-25)
 
+## MCP API
+
+The app exposes an MCP (Model Context Protocol) HTTP endpoint at `/api/mcp` that allows external AI agents (like Claude Desktop) to query school data programmatically.
+
+- **Endpoint:** `POST /api/mcp`
+- **Format:** JSON-RPC 2.0
+- **Rate limit:** 60 requests/minute per IP
+- **No authentication required**
+
+See [docs/mcp-api.md](docs/mcp-api.md) for full API documentation.
+
 ## Deployment
 
 Deployed to **Google Cloud Run** with automatic CI/CD via GitHub Actions.
