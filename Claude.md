@@ -256,6 +256,38 @@ Edit `BLOCKED_PATTERNS` or `FLAG_PATTERNS` in `src/lib/ai/prefilter.ts`
 ### Update system prompt
 Edit `SYSTEM_PROMPT` in `src/lib/ai/system-prompt.ts`
 
+### Deployment
+
+Deploy to Google Cloud Run with automatic CI/CD via GitHub Actions.
+
+```bash
+# Test locally with Docker
+docker build -t nyc-school-explorer .
+docker run -p 3000:3000 \
+  -e ANTHROPIC_API_KEY=your-key \
+  -e GEMINI_API_KEY=your-key \
+  nyc-school-explorer
+
+# Deploy (automatic on push to main)
+git push origin main
+```
+
+See `docs/deployment.md` for full setup instructions including GCP configuration and GitHub secrets.
+
+### Update the database for deployment
+
+The SQLite database (`data/schools.db`) is committed to the repo and baked into the container.
+
+```bash
+# Re-seed with new data
+npx tsx scripts/seed-database.ts
+
+# Commit and deploy
+git add data/schools.db
+git commit -m "Update database"
+git push
+```
+
 ## Data Statistics
 
 ### School Metrics by Year

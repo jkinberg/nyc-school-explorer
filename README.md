@@ -55,6 +55,21 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 - LL93 Suspension Reports (2022-23 through 2024-25)
 - PTA Financial Reporting (2022-23 through 2024-25)
 
+## Deployment
+
+Deployed to **Google Cloud Run** with automatic CI/CD via GitHub Actions.
+
+```bash
+# Test locally with Docker
+docker build -t nyc-school-explorer .
+docker run -p 3000:3000 \
+  -e ANTHROPIC_API_KEY=your-key \
+  -e GEMINI_API_KEY=your-key \
+  nyc-school-explorer
+```
+
+Push to `main` to deploy automatically. See [docs/deployment.md](docs/deployment.md) for full setup instructions.
+
 ## License
 
 Private project.
