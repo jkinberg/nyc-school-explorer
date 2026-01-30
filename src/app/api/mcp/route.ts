@@ -55,7 +55,7 @@ function jsonRpcError(id: string | number | null, error: { code: number; message
 }
 
 // Protocol version we support
-const PROTOCOL_VERSION = '2024-11-05';
+const PROTOCOL_VERSION = '2025-06-18';
 
 // Server info
 const SERVER_INFO = {
@@ -147,18 +147,21 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate JSON-RPC structure
-  const { jsonrpc, id = null, method, params } = body;
+  const { jsonrpc, id, method, params } = body;
+
+  // Check if this is a notification (no id field means notification in JSON-RPC 2.0)
+  const isNotification = id === undefined || id === null;
 
   if (jsonrpc !== '2.0') {
     return NextResponse.json(
-      jsonRpcError(id, { ...JSON_RPC_ERRORS.INVALID_REQUEST, message: 'Invalid JSON-RPC version' }),
+      jsonRpcError(id ?? null, { ...JSON_RPC_ERRORS.INVALID_REQUEST, message: 'Invalid JSON-RPC version' }),
       { status: 400 }
     );
   }
 
   if (!method || typeof method !== 'string') {
     return NextResponse.json(
-      jsonRpcError(id, { ...JSON_RPC_ERRORS.INVALID_REQUEST, message: 'Method is required' }),
+      jsonRpcError(id ?? null, { ...JSON_RPC_ERRORS.INVALID_REQUEST, message: 'Method is required' }),
       { status: 400 }
     );
   }
@@ -172,6 +175,12 @@ export async function POST(request: NextRequest) {
         result = handleInitialize((params as { protocolVersion?: string; clientInfo?: { name: string; version: string } }) || {});
         break;
 
+      case 'notifications/initialized':
+      case 'initialized':
+        // Client notification after initialize - acknowledge without response body
+        console.log(`[MCP] client initialized ip=${clientIP}`);
+        return new Response(null, { status: 202 });
+
       case 'tools/list':
         result = handleToolsList();
         break;
@@ -179,7 +188,7 @@ export async function POST(request: NextRequest) {
       case 'tools/call':
         if (!params || typeof params !== 'object' || !('name' in params)) {
           return NextResponse.json(
-            jsonRpcError(id, { ...JSON_RPC_ERRORS.INVALID_PARAMS, message: 'tools/call requires name parameter' }),
+            jsonRpcError(id ?? null, { ...JSON_RPC_ERRORS.INVALID_PARAMS, message: 'tools/call requires name parameter' }),
             { status: 400 }
           );
         }
@@ -187,19 +196,24 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
+        // For notifications to unknown methods, accept gracefully (per MCP spec)
+        if (isNotification) {
+          console.log(`[MCP] ignoring unknown notification method=${method} ip=${clientIP}`);
+          return new Response(null, { status: 202 });
+        }
         console.log(`[MCP] unknown method=${method} ip=${clientIP}`);
         return NextResponse.json(
-          jsonRpcError(id, JSON_RPC_ERRORS.METHOD_NOT_FOUND),
+          jsonRpcError(id ?? null, JSON_RPC_ERRORS.METHOD_NOT_FOUND),
           { status: 400 }
         );
     }
 
-    return NextResponse.json(jsonRpcSuccess(id, result));
+    return NextResponse.json(jsonRpcSuccess(id ?? null, result));
   } catch (error) {
     // Handle thrown JSON-RPC errors
     if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
       return NextResponse.json(
-        jsonRpcError(id, error as { code: number; message: string }),
+        jsonRpcError(id ?? null, error as { code: number; message: string }),
         { status: 400 }
       );
     }
@@ -207,7 +221,7 @@ export async function POST(request: NextRequest) {
     // Unexpected error
     console.error('[MCP] Internal error:', error);
     return NextResponse.json(
-      jsonRpcError(id, JSON_RPC_ERRORS.INTERNAL_ERROR),
+      jsonRpcError(id ?? null, JSON_RPC_ERRORS.INTERNAL_ERROR),
       { status: 500 }
     );
   }
