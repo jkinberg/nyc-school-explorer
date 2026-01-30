@@ -68,6 +68,8 @@ export interface SearchParams {
   year?: string;
   limit?: number;
   offset?: number;
+  nta?: string;
+  councilDistrict?: number;
 }
 
 export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
@@ -145,6 +147,21 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
     values.push(params.category);
   }
 
+  if (params.nta) {
+    conditions.push('l.nta = ?');
+    values.push(params.nta);
+  }
+
+  if (params.councilDistrict) {
+    conditions.push('l.council_district = ?');
+    values.push(params.councilDistrict);
+  }
+
+  // Include LEFT JOIN to school_locations if filtering by nta or council_district
+  const locationJoin = (params.nta || params.councilDistrict)
+    ? 'LEFT JOIN school_locations l ON s.dbn = l.dbn'
+    : '';
+
   const sql = `
     SELECT
       s.dbn, s.name, s.borough, s.district, s.school_type, s.report_type, s.is_charter,
@@ -156,6 +173,7 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
       m.pct_teachers_3plus_years, m.category, m.category_criteria
     FROM schools s
     JOIN school_metrics m ON s.dbn = m.dbn
+    ${locationJoin}
     WHERE ${conditions.join(' AND ')}
     ORDER BY m.impact_score DESC
     LIMIT ? OFFSET ?

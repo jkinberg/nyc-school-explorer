@@ -78,7 +78,8 @@ export interface SchoolWithMetrics extends School {
 }
 
 // School categories based on Impact + Performance + ENI
-export type SchoolCategory = 'high_growth_high_achievement' | 'high_growth' | 'high_achievement' | 'developing' | 'below_threshold';
+// Note: Database still stores old values ('developing', 'below_threshold'). Map at query/response layer.
+export type SchoolCategory = 'high_growth_high_achievement' | 'high_growth' | 'high_achievement' | 'below_growth_threshold' | 'lower_economic_need';
 
 // Category thresholds
 export const CATEGORY_THRESHOLDS = {

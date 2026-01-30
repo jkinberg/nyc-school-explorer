@@ -12,7 +12,7 @@ export interface SearchSchoolsParams {
   max_eni?: number;
   min_enrollment?: number;
   max_enrollment?: number;
-  category?: 'high_growth_high_achievement' | 'high_growth' | 'high_achievement' | 'developing' | 'below_threshold';
+  category?: 'high_growth_high_achievement' | 'high_growth' | 'high_achievement';
   is_charter?: boolean;
   year?: string;
   limit?: number;
@@ -56,10 +56,20 @@ export function searchSchoolsTool(params: SearchSchoolsParams): SearchSchoolsRes
     category: params.category,
     isCharter: params.is_charter,
     year,
-    limit
+    limit,
+    nta: params.nta,
+    councilDistrict: params.council_district,
   };
 
-  const schools = searchSchools(queryParams);
+  // Map old DB category values to new names in response
+  const mapCategory = (cat: string | null): string | null => {
+    if (cat === 'developing') return 'below_growth_threshold';
+    if (cat === 'below_threshold') return 'lower_economic_need';
+    return cat;
+  };
+
+  const rawSchools = searchSchools(queryParams);
+  const schools = rawSchools.map(s => ({ ...s, category: mapCategory(s.category) as SchoolWithMetrics['category'] }));
   const totalCount = countSchools(queryParams);
   const citywideStats = getCitywideStats(year);
 
@@ -84,6 +94,15 @@ export function searchSchoolsTool(params: SearchSchoolsParams): SearchSchoolsRes
   if (schools.length < 10) {
     limitations.push(
       `Small sample size (${schools.length} schools) limits generalizability`
+    );
+  }
+
+  // Add charter warning if results include charter schools
+  const charterCount = schools.filter(s => s.is_charter).length;
+  const districtCount = schools.length - charterCount;
+  if (charterCount > 0) {
+    limitations.push(
+      `Results include ${charterCount} charter and ${districtCount} district schools. Charter results should be interpreted with caution due to lottery selection effects and data differences.`
     );
   }
 
@@ -180,8 +199,8 @@ This tool always returns both Impact Score AND Performance Score together with E
       },
       category: {
         type: 'string',
-        enum: ['high_growth_high_achievement', 'high_growth', 'high_achievement', 'developing', 'below_threshold'],
-        description: 'Filter by pre-computed category (high-poverty schools have high_growth_high_achievement/high_growth/high_achievement/developing)'
+        enum: ['high_growth_high_achievement', 'high_growth', 'high_achievement'],
+        description: 'Filter by pre-computed category. Only positive categories (high_growth_high_achievement/high_growth/high_achievement) available for bulk search.'
       },
       is_charter: {
         type: 'boolean',

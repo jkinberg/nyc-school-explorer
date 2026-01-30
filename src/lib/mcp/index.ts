@@ -55,8 +55,8 @@ IMPORTANT USAGE GUIDANCE:
         max_eni: { type: 'number', description: 'Maximum Economic Need Index (0-1)' },
         category: {
           type: 'string',
-          enum: ['high_growth_high_achievement', 'high_growth', 'high_achievement', 'developing', 'below_threshold'],
-          description: 'Filter by pre-computed category'
+          enum: ['high_growth_high_achievement', 'high_growth', 'high_achievement'],
+          description: 'Filter by pre-computed category. Only positive categories available for search.'
         },
         year: { type: 'string', enum: ['2023-24', '2024-25'], default: '2024-25' },
         limit: { type: 'number', default: 10, maximum: 100 },
@@ -179,8 +179,8 @@ filter: { borough: "Brooklyn", report_type: "EMS", min_eni: 0.85 }`,
             },
             category: {
               type: 'string',
-              enum: ['high_growth', 'high_growth_high_achievement', 'high_achievement', 'developing', 'below_threshold'],
-              description: 'Filter by school category'
+              enum: ['high_growth', 'high_growth_high_achievement', 'high_achievement'],
+              description: 'Filter by school category. Only positive categories available for filtering.'
             }
           },
           description: 'IMPORTANT: Include ALL filters the user specifies. Missing filters is a critical error.'

@@ -12,13 +12,39 @@ export interface GetSchoolProfileResult {
   _context: ResponseContext;
 }
 
+// Map old DB category values to new names in response
+const mapCategory = (cat: string | null): string | null => {
+  if (cat === 'developing') return 'below_growth_threshold';
+  if (cat === 'below_threshold') return 'lower_economic_need';
+  return cat;
+};
+
 /**
  * Get detailed profile for a specific school including trends across available years.
  * Now includes location, budget, suspension, and PTA data.
  */
 export function getSchoolProfileTool(params: GetSchoolProfileParams): GetSchoolProfileResult {
-  const profile = getSchoolProfile(params.dbn);
+  const rawProfile = getSchoolProfile(params.dbn);
   const citywideStats = getCitywideStats('2024-25');
+
+  // Map category names in the profile
+  const profile = rawProfile ? {
+    ...rawProfile,
+    metrics: {
+      current: rawProfile.metrics.current ? {
+        ...rawProfile.metrics.current,
+        category: mapCategory(rawProfile.metrics.current.category) as typeof rawProfile.metrics.current.category
+      } : undefined,
+      previous: rawProfile.metrics.previous ? {
+        ...rawProfile.metrics.previous,
+        category: mapCategory(rawProfile.metrics.previous.category) as typeof rawProfile.metrics.previous.category
+      } : undefined,
+    },
+    similarSchools: rawProfile.similarSchools.map(s => ({
+      ...s,
+      category: mapCategory(s.category) as typeof s.category
+    }))
+  } : null;
 
   const limitations: string[] = [
     'Based on NYC DOE School Quality Report data',

@@ -15,8 +15,19 @@ export interface GetCuratedListsResult {
   count: number;
   schools: SchoolWithMetrics[];
   scope: string;
+  charter_district_breakdown: {
+    charter: number;
+    district: number;
+  };
   _context: ResponseContext;
 }
+
+// Map old DB category values to new names in response
+const mapCategory = (cat: string | null): string | null => {
+  if (cat === 'developing') return 'below_growth_threshold';
+  if (cat === 'below_threshold') return 'lower_economic_need';
+  return cat;
+};
 
 const LIST_DESCRIPTIONS: Record<CuratedListType, string> = {
   high_growth: "Elementary/Middle Schools with strong student growth (Impact ≥ 0.55) despite lower absolute scores (Performance < 0.50), serving high-poverty populations (ENI ≥ 0.85). These schools produce exceptional learning gains that Performance Score alone would miss.",
@@ -125,14 +136,35 @@ export function getCuratedListsTool(params: GetCuratedListsParams): GetCuratedLi
     );
   }
 
+  // Calculate charter/district breakdown
+  const charterCount = schools.filter(s => s.is_charter).length;
+  const districtCount = schools.length - charterCount;
+
+  // Add charter warning if results include charter schools
+  if (charterCount > 0) {
+    limitations.push(
+      `Includes ${charterCount} charter schools. Charter results should be interpreted with caution due to lottery selection effects.`
+    );
+  }
+
+  // Map category names in response
+  const mappedSchools = schools.map(s => ({
+    ...s,
+    category: mapCategory(s.category) as typeof s.category
+  }));
+
   return {
     list_type,
     description: LIST_DESCRIPTIONS[list_type],
-    count: schools.length,
-    schools,
+    count: mappedSchools.length,
+    schools: mappedSchools,
     scope: scopeLabel,
+    charter_district_breakdown: {
+      charter: charterCount,
+      district: districtCount
+    },
     _context: {
-      sample_size: schools.length,
+      sample_size: mappedSchools.length,
       data_year: '2024-25',
       citywide_medians: {
         impact: citywideStats?.median_impact_score || 0.50,

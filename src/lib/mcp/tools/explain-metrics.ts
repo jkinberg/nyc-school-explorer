@@ -36,10 +36,17 @@ High-poverty Elementary/Middle Schools (ENI ≥ 0.85) are classified into four c
 - **What it means**: Strong absolute scores but moderate growth. Students may arrive well-prepared
 - **Count**: Use get_curated_lists(list_type="high_achievement") for current count
 
-### Developing on Both Metrics (developing)
-- **Criteria**: Neither high Impact nor high Performance
-- **What it means**: Schools facing the challenges common to high-poverty environments
+### Below Growth Threshold (below_growth_threshold)
+- **Criteria**: Neither high Impact nor high Performance, but ENI ≥ 0.85
+- **What it means**: Schools serving high-poverty populations that have not yet reached growth thresholds. This reflects the challenges common to high-poverty environments.
+- **Note**: This category is NOT available for bulk search to prevent "schools to avoid" queries. Category is visible in individual school profiles only.
 - **Count**: Majority of high-poverty EMS schools
+
+### Lower Economic Need (lower_economic_need)
+- **Criteria**: ENI < 0.85 (schools serving lower-poverty populations)
+- **What it means**: These schools serve student populations with lower economic need. They are excluded from the high-growth framework analysis because the thresholds were validated for high-poverty schools only.
+- **Important clarification**: "Lower economic need" means the school serves a less economically disadvantaged population — it does NOT mean the school is "failing" or "low quality."
+- **Note**: This category is NOT available for bulk search. Category is visible in individual school profiles only.
 
 ### Persistent High Growth
 - Elementary/Middle Schools that maintained strong growth status in BOTH 2023-24 and 2024-25
