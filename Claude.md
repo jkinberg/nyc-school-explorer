@@ -34,7 +34,7 @@ src/
 ├── app/                          # Next.js App Router pages
 │   ├── page.tsx                  # Home page
 │   ├── explore/page.tsx          # AI Chat interface (primary feature)
-│   ├── gems/page.tsx             # Hidden Gems list
+│   ├── high-growth/page.tsx      # High Growth Schools list
 │   ├── search/page.tsx           # Filter/search schools
 │   ├── about/page.tsx            # Methodology documentation
 │   ├── school/[dbn]/page.tsx     # Individual school profile
@@ -64,35 +64,39 @@ src/
 
 ## Key Concepts
 
-### School Categories (EMS Only)
+### School Categories
 
-**IMPORTANT**: The four-group framework was validated for **Elementary/Middle Schools (EMS) only**. High Schools and other school types show different patterns.
+Categories are computed for **all school types** using the same thresholds (Impact ≥ 0.55, Performance ≥ 0.50, ENI ≥ 0.85). However, these thresholds were validated using Elementary/Middle School (EMS) data, where they represent approximately the 75th percentile. The same thresholds may represent different percentiles for High Schools and other school types.
 
 Schools are categorized based on three thresholds (computed during data import):
 
-| Category | Impact Score | Performance Score | ENI | Scope |
-|----------|-------------|-------------------|-----|-------|
-| **Elite** | >= 0.60 | >= 0.50 | >= 0.85 | EMS |
-| **Hidden Gem** | >= 0.60 | < 0.50 | >= 0.85 | EMS |
-| **Anomaly** | < 0.60 | >= 0.50 | >= 0.85 | EMS |
-| **Typical** | < 0.60 | < 0.50 | >= 0.85 | EMS |
-| **Low Poverty** | any | any | < 0.85 | EMS |
+| Category | Impact Score | Performance Score | ENI |
+|----------|-------------|-------------------|-----|
+| **Strong Growth + Strong Outcomes** | >= 0.55 | >= 0.50 | >= 0.85 |
+| **Strong Growth, Building Outcomes** | >= 0.55 | < 0.50 | >= 0.85 |
+| **Strong Outcomes, Moderate Growth** | < 0.55 | >= 0.50 | >= 0.85 |
+| **Developing on Both Metrics** | < 0.55 | < 0.50 | >= 0.85 |
+| **Below Poverty Threshold** | any | any | < 0.85 |
 
 - **Impact Score**: Measures student growth relative to similar students (less correlated with poverty)
 - **Performance Score**: Measures absolute outcomes (strongly correlated with poverty, r = -0.69)
 - **ENI (Economic Need Index)**: Poverty indicator (0-1 scale)
 
-### Persistent Gems
+### Persistent High Growth
 
-Elementary/Middle Schools that maintained high-impact status (Hidden Gem or Elite category) in BOTH 2023-24 and 2024-25 school years. Query `getPersistentGems('EMS')` for current count.
+Elementary/Middle Schools that maintained high-impact status (Strong Growth + Strong Outcomes or Strong Growth, Building Outcomes) in BOTH 2023-24 and 2024-25 school years. Query `getPersistentGems('EMS')` for current count.
 
 ### Scope Considerations
 
-The original Hidden Gems analysis was conducted on EMS data only. Key implications:
-- Default API queries filter to `report_type='EMS'`
-- The `get_curated_lists` tool defaults to EMS
-- When discussing categories, always specify "Among Elementary/Middle Schools..."
-- Counts in the database differ between EMS-only and all school types
+While categories are computed for all school types, the High Growth Schools page and `get_curated_lists` tool default to EMS because:
+- The thresholds were validated using EMS data (75th percentile cutoffs)
+- High Schools have different score distributions
+- EMS represents the largest sample size for robust patterns
+
+When querying categories:
+- Use `report_type='EMS'` for the validated framework
+- Other school types can be queried but interpret with caution
+- Always note the school type when presenting category-based findings
 
 ### Three-Layer AI Guardrails
 
@@ -121,7 +125,7 @@ The original Hidden Gems analysis was conducted on EMS data only. Key implicatio
 | `analyze_correlations` | Calculate correlation between metrics |
 | `generate_chart` | Return data for Recharts visualizations |
 | `explain_metrics` | Educational content about methodology |
-| `get_curated_lists` | Pre-computed Hidden Gems, Elite, Persistent Gems lists |
+| `get_curated_lists` | Pre-computed High Growth, Strong Growth + Outcomes, Persistent High Growth lists |
 
 ## Database Schema
 
@@ -144,7 +148,7 @@ The original Hidden Gems analysis was conducted on EMS data only. Key implicatio
 | `/api/chat` | POST | Main chat endpoint, accepts `{ messages: Message[] }` |
 | `/api/schools` | GET | Search schools with query params |
 | `/api/schools/[dbn]` | GET | Get individual school profile |
-| `/api/schools/gems` | GET | Get curated lists (type=hidden_gems\|persistent_gems\|elite) |
+| `/api/schools/gems` | GET | Get curated lists (type=high_growth\|persistent_high_growth\|high_growth_high_achievement) |
 
 ## Important Patterns
 
@@ -263,12 +267,12 @@ Edit `SYSTEM_PROMPT` in `src/lib/ai/system-prompt.ts`
 - Total schools: 1,894
 - With metrics: 1,874
 
-### EMS Only (Scope of Hidden Gems Analysis)
+### EMS Only (Scope of High Growth Analysis)
 - High-poverty EMS schools: ~710
-- Hidden Gems (EMS): ~17
-- Elite (EMS): ~105
-- Anomalies (EMS): ~73
-- Persistent Gems (EMS): Query dynamically
+- High Growth (EMS): Query dynamically
+- Strong Growth + Outcomes (EMS): Query dynamically
+- Strong Outcomes, Moderate Growth (EMS): Query dynamically
+- Persistent High Growth (EMS): Query dynamically
 
 ### Citywide Medians
 - Median Impact Score: 0.50
@@ -283,7 +287,7 @@ Edit `SYSTEM_PROMPT` in `src/lib/ai/system-prompt.ts`
 - Impact Score methodology not fully disclosed by NYC DOE
 - No student mobility data (can't rule out selection effects)
 - Charter school budget data not comparable to DOE-managed schools
-- 39% of Hidden Gems don't persist year-over-year
+- Many high growth schools don't persist year-over-year
 - No teacher-level or curriculum data
 - Suspension data contains redacted values ("R") for small counts (1-5) due to privacy
 - Suspension rates correlate with poverty and systemic bias

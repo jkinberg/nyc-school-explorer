@@ -3,7 +3,7 @@ import type { MetricExplanation, ResponseContext } from '@/types/school';
 import { getCitywideStats } from '@/lib/db/queries';
 
 export interface ExplainMetricsParams {
-  topic: 'impact_score' | 'performance_score' | 'economic_need_index' | 'hidden_gems' | 'categories' | 'methodology' | 'limitations' | 'budget_funding' | 'suspensions' | 'pta_finances' | 'school_location';
+  topic: 'impact_score' | 'performance_score' | 'economic_need_index' | 'high_growth_framework' | 'categories' | 'methodology' | 'limitations' | 'budget_funding' | 'suspensions' | 'pta_finances' | 'school_location';
 }
 
 export interface ExplainMetricsResult {
@@ -20,39 +20,39 @@ const ADDITIONAL_EXPLANATIONS: Record<string, string> = {
 
 High-poverty Elementary/Middle Schools (ENI ≥ 0.85) are classified into four categories based on their Impact and Performance scores:
 
-### Elite Schools
-- **Criteria**: Impact Score ≥ 0.60 AND Performance Score ≥ 0.50
-- **What it means**: These schools achieve both high student growth AND high absolute outcomes while serving high-poverty populations
-- **Count**: Use get_curated_lists(list_type="elite") for current count
+### Strong Growth + Strong Outcomes (high_growth_high_achievement)
+- **Criteria**: Impact Score ≥ 0.55 AND Performance Score ≥ 0.50
+- **What it means**: These schools achieve both strong student growth AND strong absolute outcomes while serving high-poverty populations
+- **Count**: Use get_curated_lists(list_type="high_growth_high_achievement") for current count
 
-### Hidden Gems
-- **Criteria**: Impact Score ≥ 0.60 AND Performance Score < 0.50
+### Strong Growth, Building Outcomes (high_growth)
+- **Criteria**: Impact Score ≥ 0.55 AND Performance Score < 0.50
 - **What it means**: Exceptional student growth despite lower absolute test scores. Students arrive behind but learn at an above-average rate
-- **Count**: Use get_curated_lists(list_type="hidden_gems") for current count
+- **Count**: Use get_curated_lists(list_type="high_growth") for current count
 - **Caution**: We cannot determine WHY these schools show high growth
 
-### Anomalies
-- **Criteria**: Impact Score < 0.60 AND Performance Score ≥ 0.50
-- **What it means**: High absolute scores but lower growth. Students may arrive well-prepared
-- **Count**: Use get_curated_lists(list_type="anomalies") for current count
+### Strong Outcomes, Moderate Growth (high_achievement)
+- **Criteria**: Impact Score < 0.55 AND Performance Score ≥ 0.50
+- **What it means**: Strong absolute scores but moderate growth. Students may arrive well-prepared
+- **Count**: Use get_curated_lists(list_type="high_achievement") for current count
 
-### Typical
+### Developing on Both Metrics (developing)
 - **Criteria**: Neither high Impact nor high Performance
 - **What it means**: Schools facing the challenges common to high-poverty environments
 - **Count**: Majority of high-poverty EMS schools
 
-### Persistent Gems
-- Elementary/Middle Schools that maintained Elite or Hidden Gem status in BOTH 2023-24 and 2024-25
+### Persistent High Growth
+- Elementary/Middle Schools that maintained strong growth status in BOTH 2023-24 and 2024-25
 - Two years of consistency suggests something real, but still doesn't prove causation
-- Use get_curated_lists(list_type="persistent_gems") for current count
+- Use get_curated_lists(list_type="persistent_high_growth") for current count
 
 ### Why EMS Only?
-The thresholds (Impact ≥ 0.60, Performance ≥ 0.50) were derived from EMS data distributions. High Schools have different score patterns and would need separate threshold validation.`,
+The thresholds (Impact ≥ 0.55, Performance ≥ 0.50) were derived from EMS data distributions. High Schools have different score patterns and would need separate threshold validation.`,
 
   methodology: `## Data Methodology
 
 ### Data Sources
-- NYC DOE School Quality Reports (2023-24, 2024-25)
+- NYC DOE School Quality Reports (2022-23, 2023-24, 2024-25)
 - Elementary/Middle Schools (EMS), High Schools (HS), Transfer Schools (HST), Early Childhood (EC), D75
 - PTA Financial Reporting data (2022-23, 2023-24, 2024-25)
 - LCGMS School Location Data + ShapePoints geographic coordinates
@@ -60,7 +60,7 @@ The thresholds (Impact ≥ 0.60, Performance ≥ 0.50) were derived from EMS dat
 - Local Law 93 Student Suspension Reports (2022-23, 2023-24, 2024-25)
 
 ### Impact Score
-The DOE's Impact Score measures student growth relative to similar students citywide. A score of 0.60 means students at this school grew more than 60% of students with similar starting points.
+The DOE's Impact Score measures student growth relative to similar students citywide. A score of 0.55 means students at this school grew more than 55% of students with similar starting points.
 
 **Important**: The exact methodology is not fully disclosed by the DOE.
 
@@ -77,7 +77,7 @@ Higher values indicate higher poverty.
 
 ### Category Assignment (EMS Only)
 Categories are pre-computed using fixed thresholds **for Elementary/Middle Schools only**:
-- High Impact: ≥ 0.60
+- High Impact: ≥ 0.55
 - High Performance: ≥ 0.50
 - High Poverty: ENI ≥ 0.85
 
@@ -167,7 +167,7 @@ export function explainMetricsTool(params: ExplainMetricsParams): ExplainMetrics
   // Unknown topic
   return {
     topic,
-    explanation: `Topic "${topic}" not found. Available topics: impact_score, performance_score, economic_need_index, hidden_gems, categories, methodology, limitations`,
+    explanation: `Topic "${topic}" not found. Available topics: impact_score, performance_score, economic_need_index, high_growth_framework, categories, methodology, limitations, budget_funding, suspensions, pta_finances, school_location`,
     _context: {
       sample_size: 0,
       data_year: '2024-25',
@@ -189,8 +189,8 @@ Topics include:
 - impact_score: What it measures, how it's calculated (as much as is known), limitations
 - performance_score: Components, correlation with poverty, what it captures
 - economic_need_index: How ENI is calculated, what it represents
-- hidden_gems: The four-groups framework and what it means
-- categories: Explanation of elite, hidden_gem, anomaly, typical categories
+- high_growth_framework: The four-groups framework and what it means
+- categories: Explanation of high_growth_high_achievement, high_growth, high_achievement, developing categories
 - methodology: Overall approach, data sources, how scores are computed
 - limitations: Comprehensive list of what this data cannot tell us
 - budget_funding: Fair Student Funding (FSF), % funded, budget allocations
@@ -204,7 +204,7 @@ Use when users ask "what does X mean" or need background to interpret findings.`
     properties: {
       topic: {
         type: 'string',
-        enum: ['impact_score', 'performance_score', 'economic_need_index', 'hidden_gems', 'categories', 'methodology', 'limitations', 'budget_funding', 'suspensions', 'pta_finances', 'school_location'],
+        enum: ['impact_score', 'performance_score', 'economic_need_index', 'high_growth_framework', 'categories', 'methodology', 'limitations', 'budget_funding', 'suspensions', 'pta_finances', 'school_location'],
         description: 'Topic to explain'
       }
     },

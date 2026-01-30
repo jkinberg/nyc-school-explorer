@@ -3,23 +3,23 @@ import { getSchoolsByCategory, getPersistentGems, getCitywideStats } from '@/lib
 import type { CuratedListType } from '@/types/school';
 
 const LIST_DESCRIPTIONS: Record<string, string> = {
-  hidden_gems: "Elementary/Middle Schools with high student growth (Impact ≥ 0.60) despite lower absolute scores (Performance < 0.50), serving high-poverty populations.",
-  persistent_gems: "Elementary/Middle Schools that maintained high-impact status across both 2023-24 and 2024-25.",
-  elite: "Elementary/Middle Schools achieving both high growth AND high absolute outcomes while serving high-poverty populations.",
-  anomalies: "Elementary/Middle Schools with high absolute scores but lower growth - students may arrive well-prepared."
+  high_growth: "Elementary/Middle Schools with strong student growth (Impact ≥ 0.55) despite lower absolute scores (Performance < 0.50), serving high-poverty populations.",
+  persistent_high_growth: "Elementary/Middle Schools that maintained high-impact status across both 2023-24 and 2024-25.",
+  high_growth_high_achievement: "Elementary/Middle Schools achieving both strong growth AND strong absolute outcomes while serving high-poverty populations.",
+  high_achievement: "Elementary/Middle Schools with strong absolute scores but moderate growth - students may arrive well-prepared."
 };
 
 /**
  * GET /api/schools/gems
  *
  * Get curated lists of schools by category.
- * Defaults to EMS (Elementary/Middle Schools) - the scope of the original Hidden Gems analysis.
+ * Defaults to EMS (Elementary/Middle Schools) - the scope of the original high growth analysis.
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const listType = (searchParams.get('type') || 'hidden_gems') as CuratedListType;
+    const listType = (searchParams.get('type') || 'high_growth') as CuratedListType;
     const borough = searchParams.get('borough') || undefined;
     const reportType = searchParams.get('report_type') || 'EMS'; // Default to EMS
     const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 200);
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     let schools;
 
     // Get the appropriate list with report_type filter
-    if (listType === 'persistent_gems') {
+    if (listType === 'persistent_high_growth') {
       schools = getPersistentGems(effectiveReportType);
     } else {
       schools = getSchoolsByCategory(listType, '2024-25', 200, effectiveReportType);
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           eni: citywideStats?.median_economic_need || 0.72
         },
         criteria: {
-          high_impact: '>= 0.60',
+          high_impact: '>= 0.55',
           high_performance: '>= 0.50',
           high_poverty: 'ENI >= 0.85'
         }

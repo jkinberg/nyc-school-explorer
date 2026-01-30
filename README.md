@@ -49,7 +49,7 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 
 ## Data Sources
 
-- NYC DOE School Quality Reports (2023-24 and 2024-25)
+- NYC DOE School Quality Reports (2022-23, 2023-24, 2024-25) — Impact/Performance scores only available for 2023-24+
 - LCGMS + ShapePoints for school locations
 - LL16 Budget Reports (2022-23 through 2024-25)
 - LL93 Suspension Reports (2022-23 through 2024-25)

@@ -73,7 +73,8 @@ export interface SearchParams {
 export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
   const db = getDatabase();
   const year = params.year || '2024-25';
-  const limit = Math.min(params.limit || 25, 100);
+  // Allow higher limits for chart generation (up to 1000)
+  const limit = Math.min(params.limit || 25, 1000);
   const offset = params.offset || 0;
 
   const conditions: string[] = ['m.year = ?'];
@@ -149,7 +150,8 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
       s.dbn, s.name, s.borough, s.district, s.school_type, s.report_type, s.is_charter,
       m.year, m.enrollment, m.impact_score, m.performance_score, m.economic_need_index,
       m.rating_instruction, m.rating_safety, m.rating_families,
-      m.survey_instruction, m.survey_safety, m.survey_leadership,
+      m.survey_instruction, m.survey_safety, m.survey_leadership, m.survey_support,
+      m.survey_communication, m.survey_family_involvement, m.survey_family_trust,
       m.student_attendance, m.teacher_attendance, m.principal_years,
       m.pct_teachers_3plus_years, m.category, m.category_criteria
     FROM schools s
@@ -200,7 +202,7 @@ export function countSchools(params: Omit<SearchParams, 'limit' | 'offset'>): nu
 
 /**
  * Get schools by category with optional report type filter.
- * Default: EMS (Elementary/Middle Schools) - the scope of the original Hidden Gems analysis.
+ * Default: EMS (Elementary/Middle Schools) - the scope of the original high growth analysis.
  */
 export function getSchoolsByCategory(
   category: string,
@@ -217,7 +219,7 @@ export function getSchoolsByCategory(
 }
 
 /**
- * Get persistent gems with optional report type filter.
+ * Get persistent high growth schools with optional report type filter.
  * Default: EMS (Elementary/Middle Schools) - the scope of the original analysis.
  */
 export function getPersistentGems(reportType?: string | 'all'): SchoolWithMetrics[] {
@@ -232,7 +234,10 @@ export function getPersistentGems(reportType?: string | 'all'): SchoolWithMetric
       s.dbn, s.name, s.borough, s.district, s.school_type, s.report_type, s.is_charter,
       m.year, m.enrollment, m.impact_score, m.performance_score, m.economic_need_index,
       m.rating_instruction, m.rating_safety, m.rating_families,
-      m.category, m.category_criteria
+      m.survey_instruction, m.survey_safety, m.survey_leadership, m.survey_support,
+      m.survey_communication, m.survey_family_involvement, m.survey_family_trust,
+      m.student_attendance, m.teacher_attendance, m.principal_years,
+      m.pct_teachers_3plus_years, m.category, m.category_criteria
     FROM persistent_gems pg
     JOIN schools s ON pg.dbn = s.dbn
     JOIN school_metrics m ON s.dbn = m.dbn
@@ -245,16 +250,16 @@ export function getPersistentGems(reportType?: string | 'all'): SchoolWithMetric
 }
 
 /**
- * Get category statistics for EMS schools (the scope of the Hidden Gems analysis).
+ * Get category statistics for EMS schools (the scope of the high growth analysis).
  * Returns dynamic counts rather than hardcoded values.
  */
 export function getEMSCategoryStats(year?: string): {
-  hidden_gems: number;
-  elite: number;
-  anomalies: number;
-  typical: number;
+  high_growth: number;
+  high_growth_high_achievement: number;
+  high_achievement: number;
+  developing: number;
   total_high_poverty: number;
-  persistent_gems: number;
+  persistent_high_growth: number;
 } {
   const db = getDatabase();
   const targetYear = year || '2024-25';
@@ -274,33 +279,33 @@ export function getEMSCategoryStats(year?: string): {
   const results = db.prepare(sql).all(targetYear) as { category: string; count: number }[];
 
   const stats = {
-    hidden_gems: 0,
-    elite: 0,
-    anomalies: 0,
-    typical: 0,
+    high_growth: 0,
+    high_growth_high_achievement: 0,
+    high_achievement: 0,
+    developing: 0,
     total_high_poverty: 0,
-    persistent_gems: 0
+    persistent_high_growth: 0
   };
 
   for (const row of results) {
     switch (row.category) {
-      case 'hidden_gem':
-        stats.hidden_gems = row.count;
+      case 'high_growth':
+        stats.high_growth = row.count;
         break;
-      case 'elite':
-        stats.elite = row.count;
+      case 'high_growth_high_achievement':
+        stats.high_growth_high_achievement = row.count;
         break;
-      case 'anomaly':
-        stats.anomalies = row.count;
+      case 'high_achievement':
+        stats.high_achievement = row.count;
         break;
-      case 'typical':
-        stats.typical = row.count;
+      case 'developing':
+        stats.developing = row.count;
         break;
     }
     stats.total_high_poverty += row.count;
   }
 
-  // Get persistent gems count for EMS
+  // Get persistent high growth count for EMS
   const persistentSql = `
     SELECT COUNT(*) as count
     FROM persistent_gems pg
@@ -308,7 +313,7 @@ export function getEMSCategoryStats(year?: string): {
     WHERE s.report_type = 'EMS'
   `;
   const persistentResult = db.prepare(persistentSql).get() as { count: number };
-  stats.persistent_gems = persistentResult.count;
+  stats.persistent_high_growth = persistentResult.count;
 
   return stats;
 }
@@ -376,7 +381,11 @@ export function findSimilarSchools(params: SimilarSchoolParams): SchoolWithMetri
     SELECT
       s.dbn, s.name, s.borough, s.district, s.school_type, s.report_type, s.is_charter,
       m.year, m.enrollment, m.impact_score, m.performance_score, m.economic_need_index,
-      m.category
+      m.rating_instruction, m.rating_safety, m.rating_families,
+      m.survey_instruction, m.survey_safety, m.survey_leadership, m.survey_support,
+      m.survey_communication, m.survey_family_involvement, m.survey_family_trust,
+      m.student_attendance, m.teacher_attendance, m.principal_years,
+      m.pct_teachers_3plus_years, m.category, m.category_criteria
     FROM schools s
     JOIN school_metrics m ON s.dbn = m.dbn
     WHERE ${conditions.join(' AND ')}
@@ -441,9 +450,25 @@ export function getCorrelation(metric1: string, metric2: string, filters?: Parti
     values.push(filters.category);
   }
 
-  if (filters?.minEni !== undefined) {
+  // Handle both camelCase (from API) and snake_case (from MCP tools) filter names
+  const minEni = filters?.minEni ?? (filters as Record<string, unknown>)?.min_eni as number | undefined;
+  const maxEni = filters?.maxEni ?? (filters as Record<string, unknown>)?.max_eni as number | undefined;
+  const borough = filters?.borough ?? (filters as Record<string, unknown>)?.borough as string | undefined;
+
+  if (minEni !== undefined) {
     conditions.push('m.economic_need_index >= ?');
-    values.push(filters.minEni);
+    values.push(minEni);
+  }
+
+  if (maxEni !== undefined) {
+    conditions.push('m.economic_need_index <= ?');
+    values.push(maxEni);
+  }
+
+  if (borough) {
+    joins.push('JOIN schools s ON m.dbn = s.dbn');
+    conditions.push('s.borough = ?');
+    values.push(borough);
   }
 
   // Calculate Pearson correlation coefficient using SQL

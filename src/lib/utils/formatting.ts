@@ -68,11 +68,11 @@ export function formatCategory(category: string | null): string {
   if (!category) return 'Unknown';
 
   const labels: Record<string, string> = {
-    elite: 'Elite (High Impact + High Performance)',
-    hidden_gem: 'Hidden Gem (High Impact, Lower Performance)',
-    anomaly: 'Anomaly (High Performance, Lower Impact)',
-    typical: 'Typical',
-    low_poverty: 'Lower Poverty (not categorized)'
+    high_growth_high_achievement: 'Strong Growth + Strong Outcomes',
+    high_growth: 'Strong Growth, Building Outcomes',
+    high_achievement: 'Strong Outcomes, Moderate Growth',
+    developing: 'Developing on Both Metrics',
+    below_threshold: 'Below Poverty Threshold'
   };
 
   return labels[category] || category;

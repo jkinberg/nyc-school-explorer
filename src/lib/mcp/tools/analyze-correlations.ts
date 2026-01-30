@@ -25,6 +25,12 @@ export interface CorrelationResult {
     mean: number | null;
   };
   interpretation: string;
+  filters_applied: {
+    min_eni?: number;
+    max_eni?: number;
+    category?: string;
+    borough?: string;
+  } | null;
   _context: ResponseContext;
 }
 
@@ -114,6 +120,9 @@ export function analyzeCorrelationsTool(params: AnalyzeCorrelationsParams): Corr
     interpretation = interpretCorrelation(result.correlation);
   }
 
+  // Build filter description for context
+  const filtersApplied = filter && Object.keys(filter).length > 0 ? filter : null;
+
   return {
     correlation: result?.correlation ?? null,
     sample_size: sampleSize,
@@ -126,6 +135,7 @@ export function analyzeCorrelationsTool(params: AnalyzeCorrelationsParams): Corr
       mean: result?.metric2Mean ?? null
     },
     interpretation,
+    filters_applied: filtersApplied,
     _context: {
       sample_size: sampleSize,
       data_year: year,

@@ -3,7 +3,7 @@ import type { ChartData } from '@/types/chat';
 import type { ResponseContext } from '@/types/school';
 
 export interface GenerateChartParams {
-  chart_type: 'scatter' | 'bar' | 'histogram';
+  chart_type: 'scatter' | 'bar' | 'histogram' | 'yoy_change';
   x_metric: string;
   y_metric?: string; // Required for scatter plots
   color_by?: 'category' | 'borough' | 'is_charter';
@@ -34,9 +34,202 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 /**
- * Generate data for visualization (scatter plot, bar chart, histogram).
+ * Bin data for histogram display.
+ * Creates bins with counts, optionally grouped by a category field.
+ */
+function binDataForHistogram(
+  data: Record<string, unknown>[],
+  metricKey: string,
+  colorBy?: string,
+  numBins: number = 10
+): { bins: Record<string, unknown>[]; min: number; max: number; binWidth: number } {
+  // Extract metric values
+  const values = data
+    .map(d => d[metricKey] as number)
+    .filter(v => v !== null && v !== undefined && !isNaN(v));
+
+  if (values.length === 0) {
+    return { bins: [], min: 0, max: 1, binWidth: 0.1 };
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const binWidth = (max - min) / numBins || 0.1;
+
+  // Initialize bins
+  const binCounts: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < numBins; i++) {
+    const binStart = min + i * binWidth;
+    const binLabel = `${binStart.toFixed(2)}-${(binStart + binWidth).toFixed(2)}`;
+    binCounts[binLabel] = { total: 0 };
+  }
+
+  // Count items in each bin
+  for (const item of data) {
+    const value = item[metricKey] as number;
+    if (value === null || value === undefined || isNaN(value)) continue;
+
+    // Find which bin this value belongs to
+    let binIndex = Math.floor((value - min) / binWidth);
+    // Handle edge case where value equals max
+    if (binIndex >= numBins) binIndex = numBins - 1;
+    if (binIndex < 0) binIndex = 0;
+
+    const binStart = min + binIndex * binWidth;
+    const binLabel = `${binStart.toFixed(2)}-${(binStart + binWidth).toFixed(2)}`;
+
+    if (!binCounts[binLabel]) {
+      binCounts[binLabel] = { total: 0 };
+    }
+
+    binCounts[binLabel].total++;
+
+    // Also count by category if colorBy is specified
+    if (colorBy) {
+      const category = String(item[colorBy] || 'unknown');
+      binCounts[binLabel][category] = (binCounts[binLabel][category] || 0) + 1;
+    }
+  }
+
+  // Convert to array format for chart
+  const bins = Object.entries(binCounts).map(([label, counts]) => ({
+    bin: label,
+    count: counts.total,
+    ...counts
+  }));
+
+  // Sort by bin label (which is numeric)
+  bins.sort((a, b) => {
+    const aStart = parseFloat(String(a.bin).split('-')[0]);
+    const bStart = parseFloat(String(b.bin).split('-')[0]);
+    return aStart - bStart;
+  });
+
+  return { bins, min, max, binWidth };
+}
+
+/**
+ * Generate year-over-year change chart data.
+ */
+function generateYoYChart(params: GenerateChartParams): GenerateChartResult {
+  const { x_metric, color_by, filter, title, limit = 200 } = params;
+
+  // Get data from both years
+  const schools2324 = searchSchools({
+    borough: filter?.borough,
+    minEni: filter?.min_eni,
+    maxEni: filter?.max_eni,
+    category: filter?.category,
+    reportType: filter?.report_type,
+    year: '2023-24',
+    limit: 1000
+  });
+
+  const schools2425 = searchSchools({
+    borough: filter?.borough,
+    minEni: filter?.min_eni,
+    maxEni: filter?.max_eni,
+    category: filter?.category,
+    reportType: filter?.report_type,
+    year: '2024-25',
+    limit: 1000
+  });
+
+  // Create lookup for 2023-24 data
+  const data2324Map = new Map(schools2324.map(s => [s.dbn, s]));
+
+  // Calculate changes for schools present in both years
+  const chartData: Record<string, unknown>[] = [];
+  for (const school of schools2425) {
+    const prev = data2324Map.get(school.dbn);
+    if (!prev) continue;
+
+    const currentVal = school[x_metric as keyof typeof school] as number | null;
+    const prevVal = prev[x_metric as keyof typeof prev] as number | null;
+
+    if (currentVal === null || prevVal === null) continue;
+
+    const change = currentVal - prevVal;
+
+    const point: Record<string, unknown> = {
+      name: school.name,
+      dbn: school.dbn,
+      [`${x_metric}_2324`]: prevVal,
+      [`${x_metric}_2425`]: currentVal,
+      [`${x_metric}_change`]: change,
+      economic_need_index: school.economic_need_index,
+      impact_score: school.impact_score,
+      performance_score: school.performance_score
+    };
+
+    if (color_by) {
+      point[color_by] = school[color_by as keyof typeof school];
+    }
+
+    chartData.push(point);
+  }
+
+  // Sort by change and limit
+  chartData.sort((a, b) => Math.abs(b[`${x_metric}_change`] as number) - Math.abs(a[`${x_metric}_change`] as number));
+  const limitedData = chartData.slice(0, limit);
+
+  const citywideStats = getCitywideStats('2024-25');
+  const metricLabel = METRIC_LABELS[x_metric] || x_metric;
+
+  const limitations: string[] = [
+    'Year-over-year changes may reflect cohort differences, not school improvement',
+    `Based on ${limitedData.length} schools with data in both years`,
+    'Only 2 years of Impact Score data available (2023-24, 2024-25)'
+  ];
+
+  return {
+    chart: {
+      type: 'scatter',
+      title: title || `Year-over-Year Change in ${metricLabel}`,
+      xAxis: {
+        label: `${metricLabel} (2023-24)`,
+        dataKey: `${x_metric}_2324`
+      },
+      yAxis: {
+        label: `${metricLabel} (2024-25)`,
+        dataKey: `${x_metric}_2425`
+      },
+      data: limitedData,
+      colorBy: color_by,
+      context: {
+        sample_size: limitedData.length,
+        data_year: '2023-24 vs 2024-25',
+        citywide_medians: {
+          impact: citywideStats?.median_impact_score || 0.50,
+          performance: citywideStats?.median_performance_score || 0.50,
+          eni: citywideStats?.median_economic_need || 0.72
+        },
+        limitations
+      }
+    },
+    _context: {
+      sample_size: limitedData.length,
+      data_year: '2023-24 vs 2024-25',
+      citywide_medians: {
+        impact: citywideStats?.median_impact_score || 0.50,
+        performance: citywideStats?.median_performance_score || 0.50,
+        eni: citywideStats?.median_economic_need || 0.72
+      },
+      limitations,
+      methodology_note: 'Year-over-year changes should be interpreted cautiously. Schools above the diagonal improved; schools below declined.'
+    }
+  };
+}
+
+/**
+ * Generate data for visualization (scatter plot, bar chart, histogram, year-over-year change).
  */
 export function generateChartTool(params: GenerateChartParams): GenerateChartResult {
+  // Handle year-over-year chart type separately
+  if (params.chart_type === 'yoy_change') {
+    return generateYoYChart(params);
+  }
+
   const {
     chart_type,
     x_metric,
@@ -93,6 +286,61 @@ export function generateChartTool(params: GenerateChartParams): GenerateChartRes
 
       return point;
     });
+
+  // Handle histogram specially - need to bin the data
+  if (chart_type === 'histogram') {
+    const { bins, min, max } = binDataForHistogram(chartData, x_metric, color_by);
+
+    const limitations: string[] = [
+      'Histogram shows distribution patterns but cannot prove causation',
+      `Based on ${chartData.length} schools with available data`,
+      `Values range from ${min.toFixed(2)} to ${max.toFixed(2)}`
+    ];
+
+    if (x_metric === 'performance_score') {
+      limitations.push('Performance Score correlates with poverty; interpret patterns carefully');
+    }
+
+    return {
+      chart: {
+        type: 'bar', // Histograms render as bar charts with binned data
+        title: title || `Distribution of ${METRIC_LABELS[x_metric] || x_metric}`,
+        xAxis: {
+          label: METRIC_LABELS[x_metric] || x_metric,
+          dataKey: 'bin'
+        },
+        yAxis: {
+          label: 'Count',
+          dataKey: 'count'
+        },
+        data: bins,
+        colorBy: color_by,
+        context: {
+          sample_size: chartData.length,
+          data_year: year,
+          value_range: { min, max },
+          citywide_medians: {
+            impact: citywideStats?.median_impact_score || 0.50,
+            performance: citywideStats?.median_performance_score || 0.50,
+            eni: citywideStats?.median_economic_need || 0.72
+          },
+          limitations
+        }
+      },
+      _context: {
+        sample_size: chartData.length,
+        data_year: year,
+        value_range: { min, max },
+        citywide_medians: {
+          impact: citywideStats?.median_impact_score || 0.50,
+          performance: citywideStats?.median_performance_score || 0.50,
+          eni: citywideStats?.median_economic_need || 0.72
+        },
+        limitations,
+        methodology_note: 'Histogram shows how values are distributed. Taller bars indicate more schools in that range.'
+      }
+    };
+  }
 
   // Generate default title
   const defaultTitle = chart_type === 'scatter'
@@ -159,6 +407,16 @@ export const generateChartDefinition = {
   name: 'generate_chart',
   description: `Generate data for visualization (scatter plot, bar chart, histogram).
 
+CRITICAL FILTER REQUIREMENTS:
+1. ALWAYS apply ALL filters the user specifies (borough, school type, ENI thresholds, etc.)
+2. When charting school categories, ALWAYS filter to report_type="EMS"
+3. When user says "exclude schools below economic need threshold" or similar, use min_eni=0.85
+4. When user says "elementary and middle schools", use report_type="EMS"
+5. When user specifies a borough, ALWAYS include it in the filter object
+
+Example: For "Brooklyn elementary schools with ENI above 0.85":
+filter: { borough: "Brooklyn", report_type: "EMS", min_eni: 0.85 }
+
 Charts should always:
 - Include axis labels with metric names
 - Note sample size
@@ -171,8 +429,8 @@ Returns structured data for client-side rendering with Recharts, not images.`,
     properties: {
       chart_type: {
         type: 'string',
-        enum: ['scatter', 'bar', 'histogram'],
-        description: 'Type of chart to generate'
+        enum: ['scatter', 'bar', 'histogram', 'yoy_change'],
+        description: 'Type of chart to generate. Use "yoy_change" for year-over-year comparison (shows 2023-24 vs 2024-25 for the specified x_metric).'
       },
       x_metric: {
         type: 'string',
@@ -190,13 +448,25 @@ Returns structured data for client-side rendering with Recharts, not images.`,
       filter: {
         type: 'object',
         properties: {
-          borough: { type: 'string' },
-          min_eni: { type: 'number' },
-          max_eni: { type: 'number' },
-          category: { type: 'string' },
-          report_type: { type: 'string' }
+          borough: {
+            type: 'string',
+            enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'],
+            description: 'Filter by borough'
+          },
+          min_eni: { type: 'number', description: 'Minimum Economic Need Index (0-1)' },
+          max_eni: { type: 'number', description: 'Maximum Economic Need Index (0-1)' },
+          category: {
+            type: 'string',
+            enum: ['high_growth', 'high_growth_high_achievement', 'high_achievement', 'developing', 'below_threshold'],
+            description: 'Filter by school category'
+          },
+          report_type: {
+            type: 'string',
+            enum: ['EMS', 'HS', 'HST', 'D75', 'EC'],
+            description: 'Filter by report type. EMS = Elementary/Middle Schools (recommended for category analysis), HS = High Schools, HST = High School Transfer, D75 = District 75, EC = Early Childhood'
+          }
         },
-        description: 'Optional filters to apply'
+        description: 'Filters to apply. IMPORTANT: For category-based analysis (high_growth, etc.), always filter to report_type="EMS" since the category framework was validated for Elementary/Middle Schools only.'
       },
       title: {
         type: 'string',

@@ -71,12 +71,11 @@ Respond with JSON only:
     "responsible_framing": <1-5>,
     "query_relevance": <1-5>
   },
-  "weighted_score": <0-100>,
   "flags": ["<specific concern 1>", "<specific concern 2>"],
   "summary": "<one sentence assessment>"
 }
 
-Calculate weighted_score as: (factual×25 + context×20 + limitations×20 + framing×20 + relevance×15) / 5`;
+Do NOT calculate weighted_score - it will be calculated by the system.`;
 
 /**
  * Evaluate a response using LLM-as-judge.
@@ -124,11 +123,10 @@ export async function evaluateResponse(
               },
               required: ['factual_accuracy', 'context_inclusion', 'limitation_acknowledgment', 'responsible_framing', 'query_relevance'],
             },
-            weighted_score: { type: Type.NUMBER },
             flags: { type: Type.ARRAY, items: { type: Type.STRING } },
             summary: { type: Type.STRING },
           },
-          required: ['scores', 'weighted_score', 'flags', 'summary'],
+          required: ['scores', 'flags', 'summary'],
         },
       },
     });
@@ -138,14 +136,20 @@ export async function evaluateResponse(
       return null;
     }
 
-    const result = JSON.parse(text) as EvaluationResult;
+    const parsed = JSON.parse(text) as Omit<EvaluationResult, 'weighted_score'>;
 
     // Validate the result structure
-    if (!result.scores || typeof result.weighted_score !== 'number') {
+    if (!parsed.scores) {
       return null;
     }
 
-    return result;
+    // Calculate weighted score ourselves with proper penalties
+    const weighted_score = calculateWeightedScore(parsed.scores);
+
+    return {
+      ...parsed,
+      weighted_score
+    };
   } catch (error) {
     console.error('Evaluation error:', error);
     return null;
@@ -154,6 +158,10 @@ export async function evaluateResponse(
 
 /**
  * Calculate weighted score from individual dimension scores.
+ *
+ * Critical failure penalty: If factual accuracy is 1 (fabricated data) or 2 (major errors),
+ * the overall score is capped regardless of other dimensions. A response with made-up data
+ * should never be rated as "Verified" (75+).
  */
 export function calculateWeightedScore(scores: EvaluationResult['scores']): number {
   const weights = {
@@ -173,7 +181,21 @@ export function calculateWeightedScore(scores: EvaluationResult['scores']): numb
   // Convert from 1-5 scale (weighted) to 0-100
   // Max possible: 5 * 100 = 500, Min possible: 1 * 100 = 100
   // Normalize: (total - 100) / 4 * 100
-  return Math.round((total - 100) / 4);
+  let weightedScore = Math.round((total - 100) / 4);
+
+  // Critical failure penalty for factual accuracy
+  // A response with fabricated or majorly incorrect data cannot be trusted,
+  // regardless of how well-framed or caveated it is
+  const factualAccuracy = scores.factual_accuracy || 1;
+  if (factualAccuracy === 1) {
+    // Fabricated data: cap at 35 (firmly in "low confidence" range)
+    weightedScore = Math.min(weightedScore, 35);
+  } else if (factualAccuracy === 2) {
+    // Major errors: cap at 55 (below "review suggested" threshold)
+    weightedScore = Math.min(weightedScore, 55);
+  }
+
+  return weightedScore;
 }
 
 /**

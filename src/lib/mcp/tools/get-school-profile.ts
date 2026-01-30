@@ -87,7 +87,7 @@ Returns comprehensive data:
 - Year-over-year change indicators
 - Economic Need Index with percentile
 - Enrollment and school type
-- Category assignment (Elite, Hidden Gem, Anomaly, Typical)
+- Category assignment (Strong Growth + Outcomes, High Growth, High Achievement, Developing)
 - Comparison to citywide and similar-school medians
 - Location data (address, grades, principal, neighborhood)
 - Budget data (total budget, % funded, FSF allocation) for up to 3 years

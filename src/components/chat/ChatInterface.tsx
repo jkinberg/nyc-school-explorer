@@ -29,9 +29,9 @@ interface SSEEvent {
 }
 
 const INITIAL_SUGGESTIONS: SuggestedQuery[] = [
-  { text: 'Show me hidden gem schools in the Bronx', category: 'explore' },
+  { text: 'Show me high growth schools in the Bronx', category: 'explore' },
   { text: 'What does Impact Score measure?', category: 'explain' },
-  { text: 'Find high-growth schools serving high-poverty populations', category: 'explore' },
+  { text: 'Find schools with strong growth serving high-poverty populations', category: 'explore' },
   { text: 'How does poverty correlate with test scores?', category: 'explore' },
 ];
 

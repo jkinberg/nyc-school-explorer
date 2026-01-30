@@ -46,7 +46,7 @@ export default function HomePage() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Hidden Gems
+            High Growth Schools
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
             Discover schools producing exceptional student growth despite high poverty levels.
@@ -96,11 +96,11 @@ export default function HomePage() {
       {/* Quick Links */}
       <div className="grid md:grid-cols-2 gap-6">
         <Link
-          href="/gems"
+          href="/high-growth"
           className="group bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
         >
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400">
-            Browse Hidden Gems →
+            Browse High Growth Schools →
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
             Explore schools with high student growth serving high-poverty populations.
@@ -123,7 +123,7 @@ export default function HomePage() {
       {/* Footer note */}
       <div className="mt-16 text-center text-sm text-gray-500 dark:text-gray-400">
         <p>
-          Data from NYC DOE School Quality Reports (2023-24, 2024-25).
+          Data from NYC DOE School Quality Reports (2022-23, 2023-24, 2024-25).
           <br />
           This tool is for educational exploration, not school choice recommendations.
         </p>

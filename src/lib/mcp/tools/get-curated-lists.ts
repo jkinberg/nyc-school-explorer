@@ -19,17 +19,17 @@ export interface GetCuratedListsResult {
 }
 
 const LIST_DESCRIPTIONS: Record<CuratedListType, string> = {
-  hidden_gems: "Elementary/Middle Schools with high student growth (Impact ≥ 0.60) despite lower absolute scores (Performance < 0.50), serving high-poverty populations (ENI ≥ 0.85). These schools produce exceptional learning gains that Performance Score alone would miss.",
-  persistent_gems: "Elementary/Middle Schools that maintained Hidden Gem or Elite status across both 2023-24 and 2024-25. Two years of consistency suggests something real, though we can't determine why.",
-  elite: "Elementary/Middle Schools achieving both high growth AND high absolute outcomes while serving high-poverty populations. The dual success story.",
-  anomalies: "Rare cases among Elementary/Middle Schools: high absolute scores but lower growth. Students may arrive well-prepared.",
+  high_growth: "Elementary/Middle Schools with strong student growth (Impact ≥ 0.55) despite lower absolute scores (Performance < 0.50), serving high-poverty populations (ENI ≥ 0.85). These schools produce exceptional learning gains that Performance Score alone would miss.",
+  persistent_high_growth: "Elementary/Middle Schools that maintained strong growth status across both 2023-24 and 2024-25. Two years of consistency suggests something real, though we can't determine why.",
+  high_growth_high_achievement: "Elementary/Middle Schools achieving both strong growth AND strong absolute outcomes while serving high-poverty populations. The dual success story.",
+  high_achievement: "Rare cases among Elementary/Middle Schools: strong absolute scores but moderate growth. Students may arrive well-prepared.",
   all_high_impact: "All high-poverty Elementary/Middle Schools producing top-quartile student growth, regardless of absolute performance level."
 };
 
 /**
  * Retrieve pre-computed school categories and curated lists.
  *
- * IMPORTANT: The Hidden Gems analysis and four-group framework were designed
+ * IMPORTANT: The high growth analysis and four-group framework were designed
  * for Elementary/Middle Schools (EMS) only. By default, this tool returns
  * EMS schools. Other school types can be queried but should include appropriate
  * caveats about methodology applicability.
@@ -48,23 +48,23 @@ export function getCuratedListsTool(params: GetCuratedListsParams): GetCuratedLi
   // Determine effective report type for queries
   const effectiveReportType = report_type === 'all' ? 'all' : report_type;
 
-  // Map list_type (plural) to database category name (singular)
+  // Map list_type to database category name
   const DB_CATEGORY: Record<string, string> = {
-    hidden_gems: 'hidden_gem',
-    anomalies: 'anomaly',
-    elite: 'elite',
+    high_growth: 'high_growth',
+    high_achievement: 'high_achievement',
+    high_growth_high_achievement: 'high_growth_high_achievement',
   };
 
   let schools: SchoolWithMetrics[];
 
   // Get the appropriate list with report_type filter
-  if (list_type === 'persistent_gems') {
+  if (list_type === 'persistent_high_growth') {
     schools = getPersistentGems(effectiveReportType);
   } else if (list_type === 'all_high_impact') {
-    // Combine elite and hidden_gem
-    const elite = getSchoolsByCategory('elite', '2024-25', 200, effectiveReportType);
-    const gems = getSchoolsByCategory('hidden_gem', '2024-25', 200, effectiveReportType);
-    schools = [...elite, ...gems];
+    // Combine high_growth_high_achievement and high_growth
+    const highGrowthHighAchievement = getSchoolsByCategory('high_growth_high_achievement', '2024-25', 200, effectiveReportType);
+    const highGrowth = getSchoolsByCategory('high_growth', '2024-25', 200, effectiveReportType);
+    schools = [...highGrowthHighAchievement, ...highGrowth];
   } else {
     const dbCategory = DB_CATEGORY[list_type] || list_type;
     schools = getSchoolsByCategory(dbCategory, '2024-25', 200, effectiveReportType);
@@ -101,7 +101,7 @@ export function getCuratedListsTool(params: GetCuratedListsParams): GetCuratedLi
       : `${report_type} Schools`;
 
   const limitations: string[] = [
-    'Categories computed using fixed thresholds (Impact ≥ 0.60, Performance threshold at 0.50, ENI ≥ 0.85)',
+    'Categories computed using fixed thresholds (Impact ≥ 0.55, Performance threshold at 0.50, ENI ≥ 0.85)',
     'Cannot determine WHY schools appear in these categories',
     'Year-over-year volatility is significant'
   ];
@@ -113,13 +113,13 @@ export function getCuratedListsTool(params: GetCuratedListsParams): GetCuratedLi
     );
   }
 
-  if (list_type === 'persistent_gems') {
+  if (list_type === 'persistent_high_growth') {
     limitations.push(
       'Two years of data provides more confidence but still cannot prove causation'
     );
   }
 
-  if (list_type === 'hidden_gems') {
+  if (list_type === 'high_growth') {
     limitations.push(
       'Many schools in this category do not maintain status year-over-year'
     );
@@ -149,32 +149,32 @@ export const getCuratedListsDefinition = {
   name: 'get_curated_lists',
   description: `Retrieve pre-computed school categories and curated lists.
 
-IMPORTANT SCOPE NOTE: The Hidden Gems analysis and four-group framework were
+IMPORTANT SCOPE NOTE: The high growth analysis and four-group framework were
 designed for and validated on Elementary/Middle Schools (EMS) only. By default,
 this tool returns EMS schools. High Schools and other school types show different
 patterns and require separate analysis.
 
 Available lists:
-- hidden_gems: High-impact, lower-performance, high-poverty EMS schools
-- persistent_gems: EMS schools that were high-impact in BOTH 2023-24 and 2024-25
-- elite: High-impact AND high-performance, high-poverty EMS schools
-- anomalies: High-performance but lower-impact, high-poverty EMS schools (rare)
+- high_growth: Strong growth, lower-performance, high-poverty EMS schools
+- persistent_high_growth: EMS schools that were high-growth in BOTH 2023-24 and 2024-25
+- high_growth_high_achievement: Strong growth AND strong outcomes, high-poverty EMS schools
+- high_achievement: Strong outcomes but moderate growth, high-poverty EMS schools (rare)
 - all_high_impact: All high-poverty EMS schools with top-quartile student growth
 
 Categories are pre-computed using fixed thresholds:
-- High Impact: Impact Score >= 0.60
+- High Impact: Impact Score >= 0.55
 - High Performance: Performance Score >= 0.50
 - High Poverty: Economic Need >= 0.85
 
 Results include full context (both scores, ENI, enrollment) for each school.
 
-Use this for the Hidden Gems feature page or when users ask about "schools beating the odds" or "high-growth high-poverty schools." Always clarify that results are for Elementary/Middle Schools.`,
+Use this for the High Growth Schools feature page or when users ask about "schools beating the odds" or "high-growth high-poverty schools." Always clarify that results are for Elementary/Middle Schools.`,
   parameters: {
     type: 'object',
     properties: {
       list_type: {
         type: 'string',
-        enum: ['hidden_gems', 'persistent_gems', 'elite', 'anomalies', 'all_high_impact'],
+        enum: ['high_growth', 'persistent_high_growth', 'high_growth_high_achievement', 'high_achievement', 'all_high_impact'],
         description: 'Which curated list to retrieve'
       },
       borough: {

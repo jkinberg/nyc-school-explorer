@@ -34,19 +34,45 @@ export default function AboutPage() {
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
           Data Sources
         </h2>
-        <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300 space-y-2">
+        <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300 space-y-3">
           <li>
-            <strong>NYC DOE School Quality Reports</strong> (2023-24, 2024-25)
+            <strong>NYC DOE School Quality Reports</strong> (2022-23, 2023-24, 2024-25)
             <br />
             <span className="text-sm text-gray-500">
-              Elementary/Middle (EMS), High School (HS), Transfer (HST), Early Childhood (EC), D75
+              Elementary/Middle (EMS), High School (HS), Transfer (HST), Early Childhood (EC), D75.
+              Impact Score and Performance Score available for 2023-24 and 2024-25 only.
+              ENI, survey results, attendance, and ratings available for all three years.
             </span>
           </li>
           <li>
-            <strong>PTA Financial Reporting</strong> (2023-24, 2024-25)
+            <strong>School Budgets (Local Law 16)</strong> (2022-23, 2023-24, 2024-25)
             <br />
             <span className="text-sm text-gray-500">
-              Income, expenses, and ending balances by school
+              Fair Student Funding allocations, total budget, % funded, and gap to full funding.
+              Note: Charter school budgets are not directly comparable to DOE-managed schools.
+            </span>
+          </li>
+          <li>
+            <strong>Student Discipline (Local Law 93)</strong> (2022-23, 2023-24, 2024-25)
+            <br />
+            <span className="text-sm text-gray-500">
+              Removals, principal suspensions, and superintendent suspensions by school.
+              Small counts (1-5) are redacted for student privacy.
+            </span>
+          </li>
+          <li>
+            <strong>PTA Financial Reporting</strong> (2022-23, 2023-24, 2024-25)
+            <br />
+            <span className="text-sm text-gray-500">
+              Income, expenses, and ending balances by school.
+              PTA income reflects parent wealth, not school quality.
+            </span>
+          </li>
+          <li>
+            <strong>School Locations (LCGMS)</strong>
+            <br />
+            <span className="text-sm text-gray-500">
+              Addresses, coordinates, building codes, neighborhood (NTA), council district, and principal information.
             </span>
           </li>
         </ul>
@@ -94,7 +120,7 @@ export default function AboutPage() {
               Higher values indicate higher poverty.
             </p>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              <strong>Citywide median:</strong> ~0.87 (varies by school type)
+              <strong>Citywide median:</strong> 0.87 for 2024-25 (varies by school type and year)
             </p>
           </div>
         </div>
@@ -107,13 +133,14 @@ export default function AboutPage() {
         </h2>
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Scope: Elementary/Middle Schools (EMS) Only</strong><br />
-            This four-group framework was designed and validated for Elementary/Middle Schools.
-            High Schools and other school types show different score distributions and patterns.
+            <strong>Note on Thresholds:</strong> Categories are computed for all school types using the same
+            thresholds (Impact ≥ 0.55, Performance ≥ 0.50). These thresholds were validated using Elementary/Middle
+            School (EMS) data, where they represent approximately the 75th percentile. The same percentile cutoffs
+            may differ for High Schools and other school types.
           </p>
         </div>
         <p className="text-gray-700 dark:text-gray-300 mb-4">
-          High-poverty Elementary/Middle Schools (ENI ≥ 0.85) are classified based on their Impact and Performance scores:
+          High-poverty schools (ENI ≥ 0.85) are classified based on their Impact and Performance scores:
         </p>
 
         <div className="overflow-x-auto">
@@ -123,77 +150,88 @@ export default function AboutPage() {
                 <th className="text-left py-2 pr-4 text-gray-900 dark:text-white">Category</th>
                 <th className="text-left py-2 pr-4 text-gray-900 dark:text-white">Impact</th>
                 <th className="text-left py-2 pr-4 text-gray-900 dark:text-white">Performance</th>
-                <th className="text-left py-2 pr-4 text-gray-900 dark:text-white">Scope</th>
                 <th className="text-left py-2 text-gray-900 dark:text-white">Meaning</th>
               </tr>
             </thead>
             <tbody className="text-gray-700 dark:text-gray-300">
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <td className="py-2 pr-4 font-medium text-green-700 dark:text-green-400">Elite</td>
-                <td className="py-2 pr-4">≥ 0.60</td>
+                <td className="py-2 pr-4 font-medium text-green-700 dark:text-green-400">Strong Growth + Strong Outcomes</td>
+                <td className="py-2 pr-4">≥ 0.55</td>
                 <td className="py-2 pr-4">≥ 0.50</td>
-                <td className="py-2 pr-4 text-gray-500">EMS</td>
-                <td className="py-2">High growth AND high absolute scores</td>
+                <td className="py-2">Strong growth AND strong absolute scores</td>
               </tr>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <td className="py-2 pr-4 font-medium text-amber-700 dark:text-amber-400">Hidden Gem</td>
-                <td className="py-2 pr-4">≥ 0.60</td>
+                <td className="py-2 pr-4 font-medium text-amber-700 dark:text-amber-400">Strong Growth, Building Outcomes</td>
+                <td className="py-2 pr-4">≥ 0.55</td>
                 <td className="py-2 pr-4">&lt; 0.50</td>
-                <td className="py-2 pr-4 text-gray-500">EMS</td>
-                <td className="py-2">High growth despite lower absolute scores</td>
+                <td className="py-2">Strong growth despite lower absolute scores</td>
               </tr>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <td className="py-2 pr-4 font-medium text-purple-700 dark:text-purple-400">Anomaly</td>
-                <td className="py-2 pr-4">&lt; 0.60</td>
+                <td className="py-2 pr-4 font-medium text-purple-700 dark:text-purple-400">Strong Outcomes, Moderate Growth</td>
+                <td className="py-2 pr-4">&lt; 0.55</td>
                 <td className="py-2 pr-4">≥ 0.50</td>
-                <td className="py-2 pr-4 text-gray-500">EMS</td>
-                <td className="py-2">High scores but less growth (rare)</td>
+                <td className="py-2">Strong scores but moderate growth (rare)</td>
               </tr>
               <tr>
-                <td className="py-2 pr-4 font-medium text-gray-700 dark:text-gray-400">Typical</td>
-                <td className="py-2 pr-4">&lt; 0.60</td>
+                <td className="py-2 pr-4 font-medium text-gray-700 dark:text-gray-400">Developing on Both Metrics</td>
+                <td className="py-2 pr-4">&lt; 0.55</td>
                 <td className="py-2 pr-4">&lt; 0.50</td>
-                <td className="py-2 pr-4 text-gray-500">EMS</td>
-                <td className="py-2">Neither high growth nor high scores</td>
+                <td className="py-2">Neither strong growth nor strong scores</td>
               </tr>
             </tbody>
           </table>
         </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+          Schools with ENI below 0.85 are classified as &quot;Below Poverty Threshold&quot; and excluded from this framework.
+        </p>
+
+        <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+          <h3 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">
+            Persistent High Growth
+          </h3>
+          <p className="text-gray-700 dark:text-gray-300 text-sm">
+            Schools that maintained &quot;Strong Growth&quot; status (Impact ≥ 0.55) across both 2023-24 and 2024-25.
+            Two consecutive years of high growth suggests more consistent patterns, though we still cannot
+            determine why these schools produce strong results.
+          </p>
+        </div>
       </section>
 
-      {/* Why EMS Only */}
+      {/* Why EMS Focus */}
       <section className="mb-12">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-          Why Elementary/Middle Schools Only?
+          Why the High Growth Page Focuses on EMS
         </h2>
         <div className="text-gray-700 dark:text-gray-300 space-y-4">
           <p>
-            The Hidden Gems analysis and four-group framework were developed specifically for
-            Elementary/Middle Schools (EMS). This scope limitation exists for several reasons:
+            While categories are computed for all school types, the{' '}
+            <Link href="/high-growth" className="text-blue-600 dark:text-blue-400 hover:underline">High Growth Schools</Link>{' '}
+            page defaults to Elementary/Middle Schools (EMS). This focus exists for several reasons:
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              <strong>Different score distributions:</strong> High Schools have different Impact
-              and Performance score distributions than EMS, so the same thresholds (0.60/0.50)
-              may not represent the same percentile cutoffs.
+              <strong>Threshold validation:</strong> The thresholds (Impact ≥ 0.55, Performance ≥ 0.50)
+              were calibrated using EMS data where they represent approximately the 75th percentile.
+              The same thresholds may represent different percentiles for High Schools.
             </li>
             <li>
               <strong>Different metrics:</strong> High School reports include graduation rates
-              and other metrics not present in EMS reports, making direct comparison difficult.
+              and other metrics not present in EMS reports, which may affect how Impact Score
+              is calculated.
             </li>
             <li>
-              <strong>Validation scope:</strong> The original analysis validated the framework
-              against EMS data only. Extending to other school types would require separate validation.
+              <strong>Sample size:</strong> EMS represents the largest group of schools,
+              providing more robust patterns.
             </li>
             <li>
-              <strong>Methodological consistency:</strong> Keeping the scope limited ensures
-              the findings are internally consistent and comparable.
+              <strong>Methodological consistency:</strong> Focusing on one school type ensures
+              findings are internally consistent and comparable.
             </li>
           </ul>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            The database includes all school types, and categories are computed for all using the
-            same thresholds. However, when discussing &quot;Hidden Gems&quot; or the four-group framework,
-            the context should always specify Elementary/Middle Schools.
+            You can explore High Schools and other school types through the search and chat features.
+            Categories are available for all school types, but interpret with caution since the
+            thresholds were not specifically validated for non-EMS schools.
           </p>
         </div>
       </section>

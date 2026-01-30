@@ -19,6 +19,15 @@ export const ALL_TOOL_DEFINITIONS = [
     name: 'search_schools',
     description: `Search NYC schools by various criteria. Returns schools with required context.
 
+CRITICAL: Apply ALL filters the user requests:
+- If user says "Brooklyn" → include borough="Brooklyn"
+- If user says "elementary schools" → include report_type="EMS" (elementary and middle are combined)
+- If user says "middle schools" → include report_type="EMS" (elementary and middle are combined)
+- If user says "elementary and middle schools" → include report_type="EMS"
+- If user says "high schools" → include report_type="HS"
+- If user says "high-poverty" or "above economic need threshold" → include min_eni=0.85
+- Missing a user-specified filter is a serious error that returns incorrect results
+
 IMPORTANT USAGE GUIDANCE:
 - Results always include Economic Need (ENI) alongside performance metrics
 - Impact Score (student growth) is less confounded by poverty than Performance Score
@@ -30,20 +39,23 @@ IMPORTANT USAGE GUIDANCE:
         borough: {
           type: 'string',
           enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'],
-          description: 'Filter by NYC borough'
+          description: 'Filter by NYC borough - REQUIRED when user specifies a borough'
         },
         report_type: {
           type: 'string',
           enum: ['EMS', 'HS', 'HST', 'EC', 'D75'],
-          description: 'Filter by school report type'
+          description: 'Filter by school report type. EMS = Elementary/Middle Schools (combined, cannot be separated). Use EMS for "elementary schools", "middle schools", or "elementary and middle schools".'
         },
         min_impact_score: { type: 'number', description: 'Minimum Impact Score (0-1)' },
         max_impact_score: { type: 'number', description: 'Maximum Impact Score (0-1)' },
-        min_eni: { type: 'number', description: 'Minimum Economic Need Index (0-1)' },
+        min_eni: {
+          type: 'number',
+          description: 'Minimum Economic Need Index (0-1). Use 0.85 for "high-poverty" or "above threshold".'
+        },
         max_eni: { type: 'number', description: 'Maximum Economic Need Index (0-1)' },
         category: {
           type: 'string',
-          enum: ['elite', 'hidden_gem', 'anomaly', 'typical'],
+          enum: ['high_growth_high_achievement', 'high_growth', 'high_achievement', 'developing', 'below_threshold'],
           description: 'Filter by pre-computed category'
         },
         year: { type: 'string', enum: ['2023-24', '2024-25'], default: '2024-25' },
@@ -111,16 +123,75 @@ IMPORTANT USAGE GUIDANCE:
   },
   {
     name: 'generate_chart',
-    description: `Generate data for visualization. Returns structured data for client-side rendering with Recharts.`,
+    description: `Generate data for visualization (scatter plot, bar chart, histogram, year-over-year change).
+
+CRITICAL FILTER REQUIREMENTS:
+1. ALWAYS apply ALL filters the user specifies (borough, school type, ENI thresholds, etc.)
+2. When charting school categories, ALWAYS filter to report_type="EMS"
+3. When user says "exclude schools below economic need threshold" or similar, use min_eni=0.85
+4. When user says "elementary schools", "middle schools", OR "elementary and middle schools" → use report_type="EMS" (they are combined in data and cannot be separated)
+5. When user says "high schools" → use report_type="HS"
+6. When user specifies a borough, ALWAYS include it in the filter object
+
+Example: For "Brooklyn elementary schools with ENI above 0.85":
+filter: { borough: "Brooklyn", report_type: "EMS", min_eni: 0.85 }`,
     input_schema: {
       type: 'object',
       properties: {
-        chart_type: { type: 'string', enum: ['scatter', 'bar', 'histogram'] },
-        x_metric: { type: 'string' },
-        y_metric: { type: 'string', description: 'Required for scatter plots' },
-        color_by: { type: 'string', enum: ['category', 'borough', 'is_charter'] },
-        title: { type: 'string' },
-        limit: { type: 'number', default: 200 }
+        chart_type: {
+          type: 'string',
+          enum: ['scatter', 'bar', 'histogram', 'yoy_change'],
+          description: 'Type of chart. Use "yoy_change" for year-over-year comparison.'
+        },
+        x_metric: {
+          type: 'string',
+          description: 'Metric for x-axis (e.g., impact_score, performance_score, economic_need_index)'
+        },
+        y_metric: {
+          type: 'string',
+          description: 'Metric for y-axis (required for scatter plots)'
+        },
+        color_by: {
+          type: 'string',
+          enum: ['category', 'borough', 'is_charter'],
+          description: 'Color points/bars by this field'
+        },
+        filter: {
+          type: 'object',
+          properties: {
+            borough: {
+              type: 'string',
+              enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'],
+              description: 'Filter by borough - REQUIRED when user specifies a borough'
+            },
+            report_type: {
+              type: 'string',
+              enum: ['EMS', 'HS', 'HST', 'D75', 'EC'],
+              description: 'Filter by report type. EMS = Elementary/Middle Schools (combined, cannot be separated). Use EMS for "elementary schools", "middle schools", or "elementary and middle schools". REQUIRED for category analysis.'
+            },
+            min_eni: {
+              type: 'number',
+              description: 'Minimum Economic Need Index (0-1). Use 0.85 for "high-poverty" or "above threshold".'
+            },
+            max_eni: {
+              type: 'number',
+              description: 'Maximum Economic Need Index (0-1)'
+            },
+            category: {
+              type: 'string',
+              enum: ['high_growth', 'high_growth_high_achievement', 'high_achievement', 'developing', 'below_threshold'],
+              description: 'Filter by school category'
+            }
+          },
+          description: 'IMPORTANT: Include ALL filters the user specifies. Missing filters is a critical error.'
+        },
+        title: { type: 'string', description: 'Custom chart title' },
+        year: {
+          type: 'string',
+          enum: ['2023-24', '2024-25'],
+          default: '2024-25'
+        },
+        limit: { type: 'number', default: 200, maximum: 1000 }
       },
       required: ['chart_type', 'x_metric']
     }
@@ -133,7 +204,7 @@ IMPORTANT USAGE GUIDANCE:
       properties: {
         topic: {
           type: 'string',
-          enum: ['impact_score', 'performance_score', 'economic_need_index', 'hidden_gems', 'categories', 'methodology', 'limitations', 'budget_funding', 'suspensions', 'pta_finances', 'school_location']
+          enum: ['impact_score', 'performance_score', 'economic_need_index', 'high_growth_framework', 'categories', 'methodology', 'limitations', 'budget_funding', 'suspensions', 'pta_finances', 'school_location']
         }
       },
       required: ['topic']
@@ -141,13 +212,13 @@ IMPORTANT USAGE GUIDANCE:
   },
   {
     name: 'get_curated_lists',
-    description: `Retrieve pre-computed school categories (Hidden Gems, Elite, etc.). Use for "schools beating the odds" queries.`,
+    description: `Retrieve pre-computed school categories (High Growth, Strong Growth + Outcomes, etc.). Use for "schools beating the odds" queries.`,
     input_schema: {
       type: 'object',
       properties: {
         list_type: {
           type: 'string',
-          enum: ['hidden_gems', 'persistent_gems', 'elite', 'anomalies', 'all_high_impact']
+          enum: ['high_growth', 'persistent_high_growth', 'high_growth_high_achievement', 'high_achievement', 'all_high_impact']
         },
         borough: { type: 'string', enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'] },
         sort_by: { type: 'string', enum: ['impact_score', 'name', 'enrollment'], default: 'impact_score' },

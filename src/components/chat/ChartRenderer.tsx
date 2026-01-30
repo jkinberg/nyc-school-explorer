@@ -19,11 +19,19 @@ interface ChartRendererProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  elite: '#10B981', // green
-  hidden_gem: '#F59E0B', // amber
-  anomaly: '#8B5CF6', // purple
-  typical: '#6B7280', // gray
-  low_poverty: '#3B82F6', // blue
+  high_growth_high_achievement: '#10B981', // green
+  high_growth: '#F59E0B', // amber
+  high_achievement: '#8B5CF6', // purple
+  developing: '#6B7280', // gray
+  below_threshold: '#3B82F6', // blue
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  high_growth_high_achievement: 'Strong Growth + Outcomes',
+  high_growth: 'Strong Growth',
+  high_achievement: 'Strong Outcomes',
+  developing: 'Developing',
+  below_threshold: 'Below Threshold',
 };
 
 const BOROUGH_COLORS: Record<string, string> = {
@@ -94,7 +102,7 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           {type === 'scatter' ? (
-            <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 60 }}>
+            <ScatterChart margin={{ top: 40, right: 20, bottom: 50, left: 60 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis
                 dataKey={xAxis.dataKey}
@@ -113,7 +121,19 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
                 className="text-gray-600 dark:text-gray-400"
               />
               <Tooltip content={<CustomTooltip />} />
-              {colorBy && <Legend />}
+              {colorBy && (
+                <Legend
+                  verticalAlign="top"
+                  align="center"
+                  wrapperStyle={{ paddingBottom: 10 }}
+                  formatter={(value: string) => {
+                    if (colorBy === 'category') {
+                      return CATEGORY_LABELS[value] || value;
+                    }
+                    return value;
+                  }}
+                />
+              )}
               {Object.entries(groupedData).map(([key, groupData]) => (
                 <Scatter
                   key={key}

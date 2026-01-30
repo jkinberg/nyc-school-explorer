@@ -38,11 +38,11 @@ export default async function SchoolPage({ params }: PageProps) {
 
   // Category badge styling
   const categoryStyles: Record<string, string> = {
-    elite: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    hidden_gem: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    anomaly: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    typical: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-    low_poverty: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    high_growth_high_achievement: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    high_growth: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    high_achievement: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    developing: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+    below_threshold: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   };
 
   return (
@@ -197,7 +197,85 @@ export default async function SchoolPage({ params }: PageProps) {
                 </span>
               </div>
             )}
+            {current.rating_families && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Families Rating:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {current.rating_families}
+                </span>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Survey Results */}
+      {current && (current.survey_instruction || current.survey_safety || current.survey_leadership || current.survey_support || current.survey_communication || current.survey_family_involvement || current.survey_family_trust) && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Survey Results (% Positive)
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            {current.survey_instruction && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Instruction/Learning:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_instruction * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+            {current.survey_safety && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Safety:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_safety * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+            {current.survey_leadership && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">School Leadership:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_leadership * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+            {current.survey_support && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Student Support:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_support * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+            {current.survey_communication && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Communication:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_communication * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+            {current.survey_family_involvement && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Family Involvement:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_family_involvement * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+            {current.survey_family_trust && (
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Family-School Trust:</span>{' '}
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {(current.survey_family_trust * 100).toFixed(0)}%
+                </span>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            Survey results reflect responses from families, teachers, and students. Higher percentages indicate more positive responses.
+          </p>
         </div>
       )}
 

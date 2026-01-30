@@ -12,7 +12,7 @@ export interface SearchSchoolsParams {
   max_eni?: number;
   min_enrollment?: number;
   max_enrollment?: number;
-  category?: 'elite' | 'hidden_gem' | 'anomaly' | 'typical' | 'low_poverty';
+  category?: 'high_growth_high_achievement' | 'high_growth' | 'high_achievement' | 'developing' | 'below_threshold';
   is_charter?: boolean;
   year?: string;
   limit?: number;
@@ -108,6 +108,12 @@ export const searchSchoolsDefinition = {
   name: 'search_schools',
   description: `Search NYC schools by various criteria. Returns schools with required context.
 
+CRITICAL: Apply ALL filters the user requests:
+- If user says "Brooklyn" → include borough="Brooklyn"
+- If user says "elementary/middle schools" → include report_type="EMS"
+- If user says "high-poverty" or "above economic need threshold" → include min_eni=0.85
+- Missing a user-specified filter is a serious error that returns incorrect results
+
 IMPORTANT USAGE GUIDANCE:
 - Results always include Economic Need (ENI) alongside performance metrics
 - Impact Score (student growth) is less confounded by poverty than Performance Score
@@ -174,8 +180,8 @@ This tool always returns both Impact Score AND Performance Score together with E
       },
       category: {
         type: 'string',
-        enum: ['elite', 'hidden_gem', 'anomaly', 'typical', 'low_poverty'],
-        description: 'Filter by pre-computed category (high-poverty schools only have elite/hidden_gem/anomaly/typical)'
+        enum: ['high_growth_high_achievement', 'high_growth', 'high_achievement', 'developing', 'below_threshold'],
+        description: 'Filter by pre-computed category (high-poverty schools have high_growth_high_achievement/high_growth/high_achievement/developing)'
       },
       is_charter: {
         type: 'boolean',

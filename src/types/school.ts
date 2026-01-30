@@ -65,6 +65,10 @@ export interface SchoolWithMetrics extends School {
   survey_instruction?: number | null;
   survey_safety?: number | null;
   survey_leadership?: number | null;
+  survey_support?: number | null;
+  survey_communication?: number | null;
+  survey_family_involvement?: number | null;
+  survey_family_trust?: number | null;
   student_attendance?: number | null;
   teacher_attendance?: number | null;
   principal_years?: number | null;
@@ -74,11 +78,11 @@ export interface SchoolWithMetrics extends School {
 }
 
 // School categories based on Impact + Performance + ENI
-export type SchoolCategory = 'elite' | 'hidden_gem' | 'anomaly' | 'typical' | 'low_poverty';
+export type SchoolCategory = 'high_growth_high_achievement' | 'high_growth' | 'high_achievement' | 'developing' | 'below_threshold';
 
 // Category thresholds
 export const CATEGORY_THRESHOLDS = {
-  impact_threshold: 0.60,      // >= for "high impact"
+  impact_threshold: 0.55,      // >= for "high impact" (true top quartile)
   performance_threshold: 0.50, // >= for "high performance"
   eni_threshold: 0.85,         // >= for "high poverty"
 } as const;
@@ -93,6 +97,8 @@ export interface CitywideStat {
   mean_performance_score: number;
   mean_economic_need: number;
   total_schools: number;
+  // Note: column names kept for DB compatibility, now store:
+  // total_hidden_gems → high_growth, total_elite → high_growth_high_achievement
   total_hidden_gems: number;
   total_elite: number;
   total_anomalies: number;
@@ -158,13 +164,13 @@ export interface SchoolSuspension {
 }
 
 // Curated list types
-export type CuratedListType = 'hidden_gems' | 'persistent_gems' | 'elite' | 'anomalies' | 'all_high_impact';
+export type CuratedListType = 'high_growth' | 'persistent_high_growth' | 'high_growth_high_achievement' | 'high_achievement' | 'all_high_impact';
 
 export const CURATED_LIST_DESCRIPTIONS: Record<CuratedListType, string> = {
-  hidden_gems: "Elementary/Middle Schools with high student growth (Impact ≥ 0.60) despite lower absolute scores (Performance < 0.50), serving high-poverty populations (ENI ≥ 0.85). These schools produce exceptional learning gains that Performance Score alone would miss.",
-  persistent_gems: "Elementary/Middle Schools that maintained Hidden Gem or Elite status across both 2023-24 and 2024-25. Two years of consistency suggests something real, though we can't determine why.",
-  elite: "Elementary/Middle Schools achieving both high growth AND high absolute outcomes while serving high-poverty populations. The dual success story.",
-  anomalies: "Rare cases among Elementary/Middle Schools: high absolute scores but lower growth. Students may arrive well-prepared.",
+  high_growth: "Elementary/Middle Schools with strong student growth (Impact ≥ 0.55) despite lower absolute scores (Performance < 0.50), serving high-poverty populations (ENI ≥ 0.85). These schools produce exceptional learning gains that Performance Score alone would miss.",
+  persistent_high_growth: "Elementary/Middle Schools that maintained strong growth status across both 2023-24 and 2024-25. Two years of consistency suggests something real, though we can't determine why.",
+  high_growth_high_achievement: "Elementary/Middle Schools achieving both strong growth AND strong absolute outcomes while serving high-poverty populations. The dual success story.",
+  high_achievement: "Rare cases among Elementary/Middle Schools: strong absolute scores but moderate growth. Students may arrive well-prepared.",
   all_high_impact: "All high-poverty Elementary/Middle Schools producing top-quartile student growth, regardless of absolute performance level."
 };
 
@@ -179,6 +185,7 @@ export interface ResponseContext {
   };
   limitations: string[];
   methodology_note?: string;
+  value_range?: { min: number; max: number };
 }
 
 // Metric explanation content
@@ -228,10 +235,10 @@ export const METRIC_EXPLANATIONS: Record<string, MetricExplanation> = {
     correlation_with_poverty: "N/A (this IS the poverty measure)",
     recommended_interpretation: "Essential context for interpreting any other metric. A school with ENI 0.95 faces fundamentally different challenges than one with ENI 0.50."
   },
-  hidden_gems: {
-    name: "Hidden Gems Framework",
+  high_growth_framework: {
+    name: "High Growth Schools Framework",
     what_it_measures: "Elementary/Middle Schools producing exceptional student growth despite high poverty and lower absolute scores.",
-    how_calculated: "Impact Score ≥ 0.60 AND Performance Score < 0.50 AND Economic Need ≥ 0.85 (EMS only)",
+    how_calculated: "Impact Score ≥ 0.55 AND Performance Score < 0.50 AND Economic Need ≥ 0.85 (EMS only)",
     limitations: [
       "Framework validated for Elementary/Middle Schools (EMS) only",
       "Counts are dynamic - query get_curated_lists for current numbers",

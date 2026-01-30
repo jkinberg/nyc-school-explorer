@@ -29,10 +29,10 @@ interface SearchResponse {
 const BOROUGHS = ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'];
 const CATEGORIES = [
   { value: '', label: 'All Categories' },
-  { value: 'elite', label: 'Elite' },
-  { value: 'hidden_gem', label: 'Hidden Gem' },
-  { value: 'anomaly', label: 'Anomaly' },
-  { value: 'typical', label: 'Typical' },
+  { value: 'high_growth_high_achievement', label: 'Strong Growth + Strong Outcomes' },
+  { value: 'high_growth', label: 'Strong Growth, Building Outcomes' },
+  { value: 'high_achievement', label: 'Strong Outcomes, Moderate Growth' },
+  { value: 'developing', label: 'Developing' },
 ];
 const REPORT_TYPES = [
   { value: '', label: 'All School Types' },

@@ -20,10 +20,10 @@ interface SchoolCardProps {
 }
 
 const CATEGORY_BADGES: Record<string, { label: string; color: string }> = {
-  elite: { label: 'Elite', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  hidden_gem: { label: 'Hidden Gem', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  anomaly: { label: 'Anomaly', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  typical: { label: 'Typical', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' },
+  high_growth_high_achievement: { label: 'Strong Growth + Outcomes', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  high_growth: { label: 'Strong Growth', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  high_achievement: { label: 'Strong Outcomes', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  developing: { label: 'Developing', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' },
 };
 
 export function SchoolCard({ school, showCategory = true, compact }: SchoolCardProps) {

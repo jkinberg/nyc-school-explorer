@@ -7,7 +7,7 @@ import { useState } from 'react';
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/explore', label: 'AI Explore', primary: true },
-  { href: '/gems', label: 'Hidden Gems' },
+  { href: '/high-growth', label: 'High Growth' },
   { href: '/search', label: 'Search' },
   { href: '/about', label: 'About' },
 ];

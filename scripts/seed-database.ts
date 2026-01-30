@@ -28,9 +28,9 @@ const SCHEMA_PATH = path.join(__dirname, '..', 'src', 'lib', 'db', 'schema.sql')
 
 // Category thresholds
 const THRESHOLDS = {
-  impact: 0.60,
-  performance: 0.50,
-  eni: 0.85,
+  impact: 0.55,      // Was 0.60 → now true top quartile (~25%)
+  performance: 0.50, // Unchanged (already ~25%)
+  eni: 0.85,         // Unchanged
 };
 
 // Report type configurations
@@ -147,6 +147,7 @@ const COLUMN_MAP: Record<string, string> = {
   'Strong Family-Community Ties Rating': 'rating_families',
 
   // Survey scores
+  // Survey columns - 2022-23 naming
   'rigorous instruction - percent positive': 'survey_instruction',
   'Rigorous Instruction - Percent Positive': 'survey_instruction',
   'supportive environment - percent positive': 'survey_safety',
@@ -157,6 +158,14 @@ const COLUMN_MAP: Record<string, string> = {
   'Trust - Percent Positive': 'survey_support',
   'effective school leadership - percent positive': 'survey_communication',
   'Effective School Leadership - Percent Positive': 'survey_communication',
+  // Survey columns - 2023-24+ naming
+  'Instruction/Learning Environment - School Percent Positive': 'survey_instruction',
+  'Safety - School Percent Positive': 'survey_safety',
+  'School Leadership - School Percent Positive': 'survey_leadership',
+  'Student Support - School Percent Positive': 'survey_support',
+  'Communication - School Percent Positive': 'survey_communication',
+  'Family Involvement - School Percent Positive': 'survey_family_involvement',
+  'Family-School Trust - School Percent Positive': 'survey_family_trust',
 
   // Demographics
   'percent ell': 'pct_ell',
@@ -175,13 +184,17 @@ const COLUMN_MAP: Record<string, string> = {
   'principal experience at this school': 'principal_years',
   'Principal Experience at this School': 'principal_years',
   'years principal': 'principal_years',
+  'Years of principal experience at this school': 'principal_years',
   'percent of teachers with 3 or more years of experience': 'pct_teachers_3plus_years',
   'Percent of Teachers with 3 or More Years of Experience': 'pct_teachers_3plus_years',
+  'Percent of teachers with 3 or more years of experience': 'pct_teachers_3plus_years',
   '% teachers 3+ years': 'pct_teachers_3plus_years',
 
   // Attendance
   'student attendance rate': 'student_attendance',
   'Student Attendance Rate': 'student_attendance',
+  'average student attendance': 'student_attendance',
+  'Average Student Attendance': 'student_attendance',
   'teacher attendance rate': 'teacher_attendance',
   'Teacher Attendance Rate': 'teacher_attendance',
 };
@@ -225,8 +238,9 @@ function parseNumber(value: unknown): number | null {
 function parseScore(value: unknown): number | null {
   const num = parseNumber(value);
   if (num === null) return null;
-  // Scores should be 0-1; if > 1, divide by 100
-  return num > 1 ? num / 100 : num;
+  // Scores are typically 0-1, but DOE scores can slightly exceed 1.0 for top schools (e.g., 1.07)
+  // Only divide by 100 if the value is clearly a percentage (> 2)
+  return num > 2 ? num / 100 : num;
 }
 
 function extractBorough(dbn: string): string {
@@ -273,16 +287,16 @@ function isCharter(name: string): boolean {
 function computeCategory(impactScore: number | null, performanceScore: number | null, eni: number | null): string {
   // Only categorize high-poverty schools
   if (eni === null || eni < THRESHOLDS.eni) {
-    return 'low_poverty';
+    return 'below_threshold';
   }
 
   const highImpact = impactScore !== null && impactScore >= THRESHOLDS.impact;
   const highPerformance = performanceScore !== null && performanceScore >= THRESHOLDS.performance;
 
-  if (highImpact && highPerformance) return 'elite';
-  if (highImpact && !highPerformance) return 'hidden_gem';
-  if (!highImpact && highPerformance) return 'anomaly';
-  return 'typical';
+  if (highImpact && highPerformance) return 'high_growth_high_achievement';
+  if (highImpact && !highPerformance) return 'high_growth';
+  if (!highImpact && highPerformance) return 'high_achievement';
+  return 'developing';
 }
 
 /**
@@ -397,19 +411,28 @@ class DataPipeline {
       else if (h === 'Rigorous Instruction Rating' || h === 'Instruction and Performance - Rating') colMap['rating_instruction'] = c;
       else if (h === 'Supportive Environment Rating' || h === 'Safety and School Climate - Rating') colMap['rating_safety'] = c;
       else if (h === 'Strong Family-Community Ties Rating' || h === 'Relationships with Families - Rating') colMap['rating_families'] = c;
-      else if (h === 'Student Attendance Rate') colMap['student_attendance'] = c;
+      else if (h === 'Student Attendance Rate' || h === 'Average Student Attendance') colMap['student_attendance'] = c;
       else if (h === 'Teacher Attendance Rate') colMap['teacher_attendance'] = c;
-      else if (h === 'Years Principal') colMap['principal_years'] = c;
+      else if (h === 'Years Principal' || h === 'Years of principal experience at this school') colMap['principal_years'] = c;
       else if (h === 'Percent ELL' || h === 'Percent English Language Learners') colMap['pct_ell'] = c;
       else if (h === 'Percent Students with Disabilities' || h === 'Percent Students with IEPs') colMap['pct_iep'] = c;
       else if (h === 'Percent in Temporary Housing' || h === 'Percent in Temp Housing') colMap['pct_temp_housing'] = c;
       else if (h === 'Percent HRA Eligible') colMap['pct_hra_eligible'] = c;
-      else if (h.includes('Teacher') && h.includes('3')) colMap['pct_teachers_3plus_years'] = c;
+      else if (h.includes('teachers with 3 or more years') || (h.includes('Teacher') && h.includes('3'))) colMap['pct_teachers_3plus_years'] = c;
+      // Survey columns - 2022-23 naming
       else if (h === 'Rigorous Instruction - Percent Positive') colMap['survey_instruction'] = c;
       else if (h === 'Supportive Environment - Percent Positive') colMap['survey_safety'] = c;
       else if (h === 'Collaborative Teachers - Percent Positive') colMap['survey_leadership'] = c;
       else if (h === 'Trust - Percent Positive') colMap['survey_support'] = c;
       else if (h === 'Effective School Leadership - Percent Positive') colMap['survey_communication'] = c;
+      // Survey columns - 2023-24+ naming
+      else if (h === 'Instruction/Learning Environment - School Percent Positive') colMap['survey_instruction'] = c;
+      else if (h === 'Safety - School Percent Positive') colMap['survey_safety'] = c;
+      else if (h === 'School Leadership - School Percent Positive') colMap['survey_leadership'] = c;
+      else if (h === 'Student Support - School Percent Positive') colMap['survey_support'] = c;
+      else if (h === 'Communication - School Percent Positive') colMap['survey_communication'] = c;
+      else if (h === 'Family Involvement - School Percent Positive') colMap['survey_family_involvement'] = c;
+      else if (h === 'Family-School Trust - School Percent Positive') colMap['survey_family_trust'] = c;
     }
 
     // Parse data rows starting at row 5 (0-indexed)
@@ -439,10 +462,11 @@ class DataPipeline {
         dbn, year, enrollment, impact_score, performance_score, economic_need_index,
         rating_instruction, rating_safety, rating_families,
         survey_instruction, survey_safety, survey_leadership, survey_support, survey_communication,
+        survey_family_involvement, survey_family_trust,
         pct_ell, pct_iep, pct_temp_housing, pct_hra_eligible,
         principal_years, pct_teachers_3plus_years, student_attendance, teacher_attendance,
         category, category_criteria
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     let processedCount = 0;
@@ -504,6 +528,8 @@ class DataPipeline {
         parsePercentage(mapped.survey_leadership),
         parsePercentage(mapped.survey_support),
         parsePercentage(mapped.survey_communication),
+        parsePercentage(mapped.survey_family_involvement),
+        parsePercentage(mapped.survey_family_trust),
         parsePercentage(mapped.pct_ell),
         parsePercentage(mapped.pct_iep),
         parsePercentage(mapped.pct_temp_housing),
@@ -843,7 +869,7 @@ class DataPipeline {
   }
 
   computePersistentGems(): void {
-    console.log('Computing persistent gems...');
+    console.log('Computing persistent high growth schools...');
 
     // Find schools that were high-impact in BOTH years
     const sql = `
@@ -853,12 +879,12 @@ class DataPipeline {
       JOIN school_metrics m2 ON m1.dbn = m2.dbn
       WHERE m1.year = '2023-24'
         AND m2.year = '2024-25'
-        AND m1.category IN ('elite', 'hidden_gem')
-        AND m2.category IN ('elite', 'hidden_gem')
+        AND m1.category IN ('high_growth_high_achievement', 'high_growth')
+        AND m2.category IN ('high_growth_high_achievement', 'high_growth')
     `;
 
     const result = this.db.prepare(sql).run();
-    console.log(`  Found ${result.changes} persistent gems`);
+    console.log(`  Found ${result.changes} persistent high growth schools`);
   }
 
   computeCitywideStats(): void {
@@ -873,6 +899,9 @@ class DataPipeline {
         total_schools, total_hidden_gems, total_elite, total_anomalies, total_typical
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
+    // Note: column names kept for backwards compatibility but now store:
+    // total_hidden_gems → high_growth, total_elite → high_growth_high_achievement,
+    // total_anomalies → high_achievement, total_typical → developing
 
     for (const year of years) {
       // Calculate medians (using approximate method via sorted data)
@@ -928,13 +957,13 @@ class DataPipeline {
         means.mean_perf,
         means.mean_eni,
         means.total,
-        categoryMap.get('hidden_gem') || 0,
-        categoryMap.get('elite') || 0,
-        categoryMap.get('anomaly') || 0,
-        categoryMap.get('typical') || 0
+        categoryMap.get('high_growth') || 0,
+        categoryMap.get('high_growth_high_achievement') || 0,
+        categoryMap.get('high_achievement') || 0,
+        categoryMap.get('developing') || 0
       );
 
-      console.log(`  ${year}: ${means.total} schools, ${categoryMap.get('hidden_gem') || 0} hidden gems`);
+      console.log(`  ${year}: ${means.total} schools, ${categoryMap.get('high_growth') || 0} high growth schools`);
     }
   }
 

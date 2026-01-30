@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS school_metrics (
   teacher_attendance REAL,
 
   -- Computed category (pre-computed during import)
-  category TEXT,                   -- elite, hidden_gem, anomaly, typical, low_poverty
+  category TEXT,                   -- high_growth_high_achievement, high_growth, high_achievement, developing, below_threshold
 
   -- Category criteria stored as JSON for transparency
   category_criteria TEXT,
@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS school_metrics (
   FOREIGN KEY (dbn) REFERENCES schools(dbn)
 );
 
--- Persistent gems (schools that were high-impact both years)
+-- Persistent high growth schools (schools that were high-impact both years)
+-- Table name kept as persistent_gems for backwards compatibility
 CREATE TABLE IF NOT EXISTS persistent_gems (
   dbn TEXT PRIMARY KEY,
   FOREIGN KEY (dbn) REFERENCES schools(dbn)
@@ -144,6 +145,9 @@ CREATE TABLE IF NOT EXISTS citywide_stats (
   mean_performance_score REAL,
   mean_economic_need REAL,
   total_schools INTEGER,
+  -- Column names kept for backwards compatibility; now store:
+  -- total_hidden_gems → high_growth, total_elite → high_growth_high_achievement,
+  -- total_anomalies → high_achievement, total_typical → developing
   total_hidden_gems INTEGER,
   total_elite INTEGER,
   total_anomalies INTEGER,

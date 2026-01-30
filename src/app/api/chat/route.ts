@@ -428,7 +428,7 @@ function generateSuggestedQueries(
   }
 
   // If categories were mentioned
-  if (lowerResponse.includes('hidden gem') || lowerResponse.includes('elite')) {
+  if (lowerResponse.includes('high growth') || lowerResponse.includes('strong growth')) {
     suggestions.push({
       text: 'How many schools maintain this status year-over-year?',
       category: 'explore'
