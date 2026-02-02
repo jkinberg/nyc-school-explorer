@@ -59,10 +59,11 @@ export function findSimilarSchoolsTool(params: FindSimilarSchoolsParams): FindSi
   }
 
   // Find similar schools
+  // Pass null to explicitly disable a matching criteria, undefined uses defaults
   const similarSchools = findSimilarSchools({
     dbn,
-    eniTolerance: match_criteria.includes('economic_need') ? eni_tolerance : undefined,
-    enrollmentTolerance: match_criteria.includes('enrollment') ? enrollment_tolerance : undefined,
+    eniTolerance: match_criteria.includes('economic_need') ? eni_tolerance : null,
+    enrollmentTolerance: match_criteria.includes('enrollment') ? enrollment_tolerance : null,
     sameBorough: match_criteria.includes('borough'),
     sameReportType: match_criteria.includes('report_type'),
     limit

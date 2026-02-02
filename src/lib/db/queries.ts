@@ -400,8 +400,8 @@ export function getEMSCategoryStats(year?: string): {
 
 export interface SimilarSchoolParams {
   dbn: string;
-  eniTolerance?: number;      // Default ±0.05
-  enrollmentTolerance?: number; // Default ±20%
+  eniTolerance?: number | null;      // ±0.05 default, null to disable
+  enrollmentTolerance?: number | null; // ±20% default, null to disable
   sameBorough?: boolean;
   sameReportType?: boolean;
   limit?: number;
@@ -409,7 +409,10 @@ export interface SimilarSchoolParams {
 
 export function findSimilarSchools(params: SimilarSchoolParams): SchoolWithMetrics[] {
   const db = getDatabase();
-  const { dbn, eniTolerance = 0.05, enrollmentTolerance = 0.2, limit = 5 } = params;
+  const { dbn, limit = 5 } = params;
+  // Use null to explicitly disable matching; undefined uses defaults
+  const eniTolerance = params.eniTolerance === null ? null : (params.eniTolerance ?? 0.05);
+  const enrollmentTolerance = params.enrollmentTolerance === null ? null : (params.enrollmentTolerance ?? 0.2);
 
   // First get the reference school
   const refSchool = getLatestMetrics(dbn);
@@ -421,16 +424,16 @@ export function findSimilarSchools(params: SimilarSchoolParams): SchoolWithMetri
   ];
   const values: (string | number)[] = ['2024-25', dbn];
 
-  // ENI tolerance
-  if (refSchool.economic_need_index) {
+  // ENI tolerance - only apply if not explicitly disabled (null)
+  if (eniTolerance !== null && refSchool.economic_need_index) {
     const eniMin = refSchool.economic_need_index - eniTolerance;
     const eniMax = refSchool.economic_need_index + eniTolerance;
     conditions.push('m.economic_need_index BETWEEN ? AND ?');
     values.push(eniMin, eniMax);
   }
 
-  // Enrollment tolerance
-  if (refSchool.enrollment) {
+  // Enrollment tolerance - only apply if not explicitly disabled (null)
+  if (enrollmentTolerance !== null && refSchool.enrollment) {
     const enrollMin = Math.floor(refSchool.enrollment * (1 - enrollmentTolerance));
     const enrollMax = Math.ceil(refSchool.enrollment * (1 + enrollmentTolerance));
     conditions.push('m.enrollment BETWEEN ? AND ?');
