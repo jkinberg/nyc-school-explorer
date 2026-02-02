@@ -42,6 +42,20 @@ const BOROUGH_COLORS: Record<string, string> = {
   'Staten Island': '#8B5CF6',
 };
 
+const CHARTER_COLORS: Record<string, string> = {
+  '1': '#8B5CF6',    // purple for charter
+  'true': '#8B5CF6',
+  '0': '#3B82F6',    // blue for traditional public
+  'false': '#3B82F6',
+};
+
+const CHARTER_LABELS: Record<string, string> = {
+  '1': 'Charter',
+  'true': 'Charter',
+  '0': 'Traditional Public',
+  'false': 'Traditional Public',
+};
+
 export function ChartRenderer({ chart }: ChartRendererProps) {
   const { type, title, xAxis, yAxis, data, colorBy } = chart;
 
@@ -49,10 +63,10 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
   const getColor = (item: Record<string, unknown>): string => {
     if (!colorBy) return '#3B82F6';
 
-    const value = item[colorBy] as string;
+    const value = String(item[colorBy]);
     if (colorBy === 'category') return CATEGORY_COLORS[value] || '#6B7280';
     if (colorBy === 'borough') return BOROUGH_COLORS[value] || '#6B7280';
-    if (colorBy === 'is_charter') return value ? '#F59E0B' : '#3B82F6';
+    if (colorBy === 'is_charter') return CHARTER_COLORS[value] || '#6B7280';
 
     return '#3B82F6';
   };
@@ -147,6 +161,9 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
                   formatter={(value: string) => {
                     if (colorBy === 'category') {
                       return CATEGORY_LABELS[value] || value;
+                    }
+                    if (colorBy === 'is_charter') {
+                      return CHARTER_LABELS[value] || value;
                     }
                     return value;
                   }}
