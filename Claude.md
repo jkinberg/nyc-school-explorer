@@ -67,7 +67,7 @@ src/
 │   ├── mcp/                      # MCP tools
 │   │   ├── index.ts              # Tool definitions & executor
 │   │   └── tools/                # Individual tool implementations
-│   └── utils/                    # Helpers (formatting, rate-limit)
+│   └── utils/                    # Helpers (formatting, rate-limit, fuzzy search)
 └── types/                        # TypeScript types
     ├── school.ts                 # School-related types
     └── chat.ts                   # Chat-related types
@@ -130,13 +130,37 @@ When querying categories:
 
 | Tool | Purpose |
 |------|---------|
-| `search_schools` | Filter schools by borough, category, metrics |
-| `get_school_profile` | Detailed school view with YoY comparison |
+| `search_schools` | Filter schools by borough, category, metrics. Supports `query` param for name/DBN search |
+| `get_school_profile` | Detailed school view with YoY comparison. Returns suggestions if DBN not found |
 | `find_similar_schools` | Find peer schools by ENI (±5%) and enrollment (±20%) |
 | `analyze_correlations` | Calculate correlation between metrics |
 | `generate_chart` | Return data for Recharts visualizations |
 | `explain_metrics` | Educational content about methodology |
 | `get_curated_lists` | Pre-computed High Growth, Strong Growth + Outcomes, Persistent High Growth lists |
+
+### Fuzzy School Search
+
+The system supports flexible school name searching with several features:
+
+**Name Search via `search_schools`:**
+- Use `query` parameter to search by school name or DBN
+- Single word matches both name and DBN columns
+- Multiple words use AND logic (all must appear in name)
+- Example: `search_schools({ query: "Brooklyn Tech" })`
+
+**Abbreviation Normalization:**
+- Common abbreviations are automatically expanded: PS → P.S., IS → I.S., MS → M.S., JHS → J.H.S.
+- "PS 188" will match "P.S. 188 The Island School"
+
+**Fallback Suggestions in `get_school_profile`:**
+- If exact DBN not found, returns `suggestions` array with up to 5 similar schools
+- Suggestions use LIKE matching first, then Levenshtein fuzzy matching
+- Example: `get_school_profile({ dbn: "Brooklyn Tech" })` returns suggestions
+
+**Typo Tolerance (Levenshtein):**
+- When LIKE search returns no results, fuzzy matching kicks in
+- Edit distance ≤ 3 for typos like "Stuyvesent" → "Stuyvesant"
+- Implemented in `src/lib/utils/fuzzy.ts`
 
 ## Database Schema
 
