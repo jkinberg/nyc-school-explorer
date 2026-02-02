@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { ChevronDown, ChevronRight, Loader2, CheckCircle2, Wrench } from 'lucide-react';
 
 // Human-readable tool labels
@@ -21,6 +22,7 @@ export interface ToolExecution {
   status: 'running' | 'completed' | 'error';
   resultSummary?: string;
   error?: string;
+  schools?: Array<{ name: string; dbn: string }>;
 }
 
 interface ToolCallDisplayProps {
@@ -48,7 +50,7 @@ function ToolCard({ execution }: ToolCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const label = TOOL_LABELS[execution.name] || execution.name;
 
-  const hasDetails = execution.parameters || execution.resultSummary || execution.error;
+  const hasDetails = execution.parameters || execution.resultSummary || execution.error || (execution.schools && execution.schools.length > 0);
 
   return (
     <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -116,6 +118,31 @@ function ToolCard({ execution }: ToolCardProps) {
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {execution.resultSummary}
               </p>
+            </div>
+          )}
+
+          {execution.schools && execution.schools.length > 0 && (
+            <div className="mt-2">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Schools
+              </span>
+              <ul className="mt-1 space-y-0.5 max-h-48 overflow-y-auto">
+                {execution.schools.map((school) => (
+                  <li key={school.dbn}>
+                    <Link
+                      href={`/school/${school.dbn}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {school.name}
+                    </Link>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
+                      ({school.dbn})
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

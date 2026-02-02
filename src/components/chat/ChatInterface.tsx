@@ -250,7 +250,8 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
                           ...te,
                           status: toolError ? 'error' as const : 'completed' as const,
                           resultSummary,
-                          error: toolError
+                          error: toolError,
+                          schools
                         }
                       : te
                   )
