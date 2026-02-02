@@ -67,10 +67,28 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
       }, {})
     : { all: data };
 
+  // Check if this is histogram data (has 'bin' and 'count' fields)
+  const isHistogram = data.length > 0 && 'bin' in data[0] && 'count' in data[0];
+
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: Record<string, unknown> }[] }) => {
     if (!active || !payload?.length) return null;
 
     const item = payload[0].payload;
+
+    // Handle histogram data differently
+    if (isHistogram) {
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+          <p className="font-medium text-gray-900 dark:text-white">
+            {xAxis.label}: {String(item.bin)}
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {item.count as number} school{(item.count as number) !== 1 ? 's' : ''}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
         <p className="font-medium text-gray-900 dark:text-white">

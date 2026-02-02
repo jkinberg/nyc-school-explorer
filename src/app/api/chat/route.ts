@@ -189,14 +189,22 @@ export async function POST(request: NextRequest) {
                 // Track tool names for suggestion generation
                 toolNames.push(toolUse.name);
 
-                // Emit tool_start event
-                controller.enqueue(encoder.encode(sseEvent('tool_start', { name: toolUse.name })));
+                // Emit enhanced tool_start event with id and parameters
+                const toolParams = toolUse.input as Record<string, unknown>;
+                controller.enqueue(encoder.encode(sseEvent('tool_start', {
+                  id: toolUse.id,
+                  name: toolUse.name,
+                  parameters: toolParams
+                })));
 
                 try {
-                  const result = executeTool(toolUse.name, toolUse.input as Record<string, unknown>) as Record<string, unknown>;
+                  const result = executeTool(toolUse.name, toolParams) as Record<string, unknown>;
 
                   // Store full result for evaluation
                   toolResults.push(JSON.stringify(result));
+
+                  // Generate result summary for client display
+                  const resultSummary = generateToolResultSummary(toolUse.name, result);
 
                   if (toolUse.name === 'generate_chart') {
                     // Layer 1: Send full chart data to client for rendering
@@ -231,6 +239,17 @@ export async function POST(request: NextRequest) {
                       content: JSON.stringify(summarized)
                     });
                   }
+
+                  // Extract school name/dbn pairs for client-side linking
+                  const schools = extractSchoolMappings(toolUse.name, result);
+
+                  // Emit enhanced tool_end event with result summary and school mappings
+                  controller.enqueue(encoder.encode(sseEvent('tool_end', {
+                    id: toolUse.id,
+                    name: toolUse.name,
+                    resultSummary,
+                    schools
+                  })));
                 } catch (toolError) {
                   console.error(`Tool error (${toolUse.name}):`, toolError);
                   toolResultsContent.push({
@@ -239,10 +258,14 @@ export async function POST(request: NextRequest) {
                     content: JSON.stringify({ error: `Tool execution failed: ${toolError}` }),
                     is_error: true
                   });
-                }
 
-                // Emit tool_end event
-                controller.enqueue(encoder.encode(sseEvent('tool_end', { name: toolUse.name })));
+                  // Emit tool_end event with error
+                  controller.enqueue(encoder.encode(sseEvent('tool_end', {
+                    id: toolUse.id,
+                    name: toolUse.name,
+                    error: `Tool execution failed: ${toolError}`
+                  })));
+                }
               }
 
               toolIterations++;
@@ -468,6 +491,119 @@ function generateSuggestedQueries(
   }
 
   return suggestions.slice(0, 3);
+}
+
+// Extract school name/DBN pairs for client-side linking
+function extractSchoolMappings(
+  toolName: string,
+  result: Record<string, unknown>
+): Array<{ name: string; dbn: string }> {
+  const mappings: Array<{ name: string; dbn: string }> = [];
+
+  const extractFromSchool = (school: Record<string, unknown>) => {
+    const name = school.name as string | undefined;
+    const dbn = school.dbn as string | undefined;
+    if (name && dbn) {
+      mappings.push({ name, dbn });
+    }
+  };
+
+  switch (toolName) {
+    case 'search_schools':
+    case 'get_curated_lists': {
+      const schools = result.schools as Record<string, unknown>[] | undefined;
+      if (schools) {
+        for (const school of schools) {
+          extractFromSchool(school);
+        }
+      }
+      break;
+    }
+    case 'find_similar_schools': {
+      const target = result.target_school as Record<string, unknown> | undefined;
+      if (target) extractFromSchool(target);
+      const similar = result.similar_schools as Record<string, unknown>[] | undefined;
+      if (similar) {
+        for (const school of similar) {
+          extractFromSchool(school);
+        }
+      }
+      break;
+    }
+    case 'get_school_profile': {
+      const profile = result.profile as Record<string, unknown> | null;
+      if (profile?.school) {
+        extractFromSchool(profile.school as Record<string, unknown>);
+      }
+      const similarSchools = profile?.similarSchools as Record<string, unknown>[] | undefined;
+      if (similarSchools) {
+        for (const school of similarSchools) {
+          extractFromSchool(school);
+        }
+      }
+      break;
+    }
+    // generate_chart, analyze_correlations, explain_metrics don't return individual schools
+  }
+
+  return mappings;
+}
+
+// Generate human-readable summaries for tool results (for client display)
+function generateToolResultSummary(toolName: string, result: Record<string, unknown>): string {
+  switch (toolName) {
+    case 'search_schools': {
+      const schools = result.schools as Record<string, unknown>[] | undefined;
+      const total = result.total as number | undefined;
+      if (!schools || schools.length === 0) {
+        return 'No schools found matching criteria';
+      }
+      return `Found ${total ?? schools.length} school${(total ?? schools.length) !== 1 ? 's' : ''}`;
+    }
+    case 'get_school_profile': {
+      const profile = result.profile as Record<string, unknown> | null;
+      if (!profile) {
+        return 'School not found';
+      }
+      const school = profile.school as Record<string, unknown> | undefined;
+      const name = school?.name as string | undefined;
+      return name ? `Retrieved profile for ${name}` : 'Retrieved school profile';
+    }
+    case 'find_similar_schools': {
+      const similar = result.similar_schools as Record<string, unknown>[] | undefined;
+      if (!similar || similar.length === 0) {
+        return 'No similar schools found';
+      }
+      return `Found ${similar.length} similar school${similar.length !== 1 ? 's' : ''}`;
+    }
+    case 'analyze_correlations': {
+      const correlation = result.correlation as number | undefined;
+      if (correlation === undefined) {
+        return 'Correlation analysis complete';
+      }
+      return `Correlation: ${correlation.toFixed(3)}`;
+    }
+    case 'generate_chart': {
+      const chart = result.chart as Record<string, unknown> | undefined;
+      const title = chart?.title as string | undefined;
+      return title ? `Generated chart: ${title}` : 'Chart generated';
+    }
+    case 'explain_metrics': {
+      const metric = result.metric as string | undefined;
+      return metric ? `Explanation for ${metric}` : 'Metric explanation retrieved';
+    }
+    case 'get_curated_lists': {
+      const schools = result.schools as Record<string, unknown>[] | undefined;
+      const listType = result.list_type as string | undefined;
+      if (!schools || schools.length === 0) {
+        return 'No schools in list';
+      }
+      const label = listType?.replace(/_/g, ' ') || 'curated';
+      return `Retrieved ${schools.length} ${label} school${schools.length !== 1 ? 's' : ''}`;
+    }
+    default:
+      return 'Tool completed successfully';
+  }
 }
 
 // Layer 2: Summarize tool results to reduce tokens sent back to Claude.

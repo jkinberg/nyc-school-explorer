@@ -3,8 +3,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { SuggestedQueries } from './SuggestedQueries';
+import { ScrollToBottomButton } from './ScrollToBottomButton';
+import { useScrollBehavior } from '@/hooks/useScrollBehavior';
 import { generateId } from '@/lib/utils/formatting';
 import type { EvaluationResult, ChartData } from '@/types/chat';
+import type { ToolExecution } from './ToolCallDisplay';
+import type { SchoolMapping } from './MarkdownRenderer';
 
 interface Message {
   id: string;
@@ -16,6 +20,8 @@ interface Message {
   isEvaluating?: boolean;
   evaluation?: EvaluationResult;
   charts?: ChartData[];
+  toolExecutions?: ToolExecution[];
+  schoolMappings?: SchoolMapping;
 }
 
 interface SuggestedQuery {
@@ -80,14 +86,14 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Track if any message is currently streaming
+  const isStreaming = messages.some(m => m.isStreaming);
+
+  // Use scroll behavior hook
+  const { containerRef, isAtBottom, scrollToBottom, handleScroll } = useScrollBehavior(isStreaming);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const initialQuerySentRef = useRef(false);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -123,7 +129,8 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
       role: 'assistant',
       content: '',
       timestamp: new Date(),
-      isLoading: true
+      isLoading: true,
+      toolExecutions: []
     }]);
     setIsLoading(true);
 
@@ -182,20 +189,73 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
               break;
             }
 
-            case 'tool_start':
-              // Keep loading state during tool execution
-              if (!hasReceivedText) {
-                setMessages(prev => prev.map(m =>
-                  m.id === loadingId
-                    ? { ...m, isLoading: true }
-                    : m
-                ));
-              }
-              break;
+            case 'tool_start': {
+              // Enhanced: now includes id, name, and parameters
+              const { id, name, parameters } = event.data as {
+                id: string;
+                name: string;
+                parameters?: Record<string, unknown>;
+              };
 
-            case 'tool_end':
-              // Tool finished — continue waiting for text
+              // Add tool execution to message
+              setMessages(prev => prev.map(m => {
+                if (m.id !== loadingId) return m;
+                const newExecution: ToolExecution = {
+                  id,
+                  name,
+                  parameters,
+                  status: 'running'
+                };
+                return {
+                  ...m,
+                  isLoading: !hasReceivedText, // Keep loading state if no text yet
+                  toolExecutions: [...(m.toolExecutions || []), newExecution]
+                };
+              }));
               break;
+            }
+
+            case 'tool_end': {
+              // Enhanced: now includes id, name, resultSummary, and schools for linking
+              const { id, name, resultSummary, error: toolError, schools } = event.data as {
+                id: string;
+                name: string;
+                resultSummary?: string;
+                error?: string;
+                schools?: Array<{ name: string; dbn: string }>;
+              };
+
+              // Update tool execution status and add school mappings
+              setMessages(prev => prev.map(m => {
+                if (m.id !== loadingId) return m;
+
+                // Merge new school mappings
+                const newMappings = new Map(m.schoolMappings || []);
+                if (schools) {
+                  for (const school of schools) {
+                    if (school.name && school.dbn) {
+                      newMappings.set(school.name, school.dbn);
+                    }
+                  }
+                }
+
+                return {
+                  ...m,
+                  schoolMappings: newMappings.size > 0 ? newMappings : m.schoolMappings,
+                  toolExecutions: (m.toolExecutions || []).map(te =>
+                    te.id === id
+                      ? {
+                          ...te,
+                          status: toolError ? 'error' as const : 'completed' as const,
+                          resultSummary,
+                          error: toolError
+                        }
+                      : te
+                  )
+                };
+              }));
+              break;
+            }
 
             case 'chart_data': {
               // Layer 1: Receive full chart data sent separately from Claude's conversation
@@ -290,9 +350,13 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full min-h-0 bg-white dark:bg-gray-900 relative">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         {messages.length === 0 ? (
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -336,9 +400,13 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
             {error}
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
+
+      {/* Scroll to bottom button */}
+      <ScrollToBottomButton
+        visible={!isAtBottom && messages.length > 0}
+        onClick={scrollToBottom}
+      />
 
       {/* Input area */}
       <div className="border-t border-gray-200 dark:border-gray-700 p-4">

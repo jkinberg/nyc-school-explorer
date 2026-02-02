@@ -11,6 +11,13 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Interactive charts** via Recharts for data visualization
 - **School profiles** with year-over-year comparison
 
+### Chat Interface
+
+- **Rich markdown rendering**: tables, lists, code blocks with proper styling via react-markdown
+- **Auto-linked school names**: school names in responses link directly to profile pages (opens in new tab)
+- **Tool visibility**: collapsible cards show when Claude is searching, analyzing, or generating charts
+- **Smart scrolling**: no auto-scroll during streaming; floating "scroll to bottom" button when reading history
+
 ## Getting Started
 
 ```bash
@@ -36,6 +43,7 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 - **Database**: SQLite with better-sqlite3
 - **AI**: Anthropic Claude API (claude-sonnet-4-20250514 for chat), Google Gemini (gemini-3-flash-preview for evaluation)
 - **Charts**: Recharts
+- **Markdown**: react-markdown with remark-gfm
 - **Styling**: Tailwind CSS 4
 
 ## Environment Variables

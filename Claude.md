@@ -25,6 +25,7 @@ npm run dev
 - **Database**: SQLite with better-sqlite3
 - **AI**: Anthropic Claude API (claude-sonnet-4-20250514 for chat), Google Gemini (gemini-3-flash-preview for evaluation)
 - **Charts**: Recharts
+- **Markdown**: react-markdown with remark-gfm
 - **Styling**: Tailwind CSS 4
 
 ## Project Structure
@@ -43,8 +44,18 @@ src/
 │       └── schools/              # REST API for school data
 ├── components/
 │   ├── chat/                     # Chat interface components
+│   │   ├── ChatInterface.tsx     # Main chat container with scroll behavior
+│   │   ├── MessageBubble.tsx     # Individual message display
+│   │   ├── MarkdownRenderer.tsx  # React-markdown with school name linking
+│   │   ├── ToolCallDisplay.tsx   # Collapsible MCP tool execution cards
+│   │   ├── ScrollToBottomButton.tsx  # Floating scroll button
+│   │   ├── ChartRenderer.tsx     # Recharts visualization
+│   │   ├── ConfidenceBadge.tsx   # LLM-as-judge score display
+│   │   └── SuggestedQueries.tsx  # Follow-up query suggestions
 │   ├── schools/                  # School display components
 │   └── common/                   # Shared components
+├── hooks/
+│   └── useScrollBehavior.ts      # Smart scroll management for streaming
 ├── lib/
 │   ├── ai/                       # AI guardrails
 │   │   ├── prefilter.ts          # Pre-filter harmful queries
@@ -193,6 +204,34 @@ _context: {
 7. Emit `done` event with `evaluating: true/false` flag
 8. If evaluation enabled: await LLM-as-judge evaluation (10s timeout), emit `evaluation` SSE event
 9. Close stream
+
+### Chat Interface Features
+
+The chat UI (`src/components/chat/`) includes several user experience enhancements:
+
+**Markdown Rendering** (`MarkdownRenderer.tsx`):
+- Uses `react-markdown` with `remark-gfm` for full GitHub-flavored markdown support
+- Styled tables with proper borders, header backgrounds, and horizontal scrolling
+- Lists with proper indentation (bullets and numbers)
+- Code blocks and inline code with gray backgrounds
+- All links open in new tabs to preserve chat context
+
+**School Name Linking**:
+- DBNs (e.g., `09X004`) are automatically detected and linked to `/school/[dbn]`
+- School names from tool results are extracted and auto-linked in responses
+- Mappings are sent via `tool_end` SSE events with `schools` array
+
+**MCP Tool Visibility** (`ToolCallDisplay.tsx`):
+- Shows collapsible cards when Claude calls tools
+- Displays tool name with human-readable labels (e.g., "Search Schools")
+- Status indicator: spinning loader (running) or checkmark (completed)
+- Expandable section shows parameters and result summary
+
+**Smart Scroll Behavior** (`useScrollBehavior.ts`, `ScrollToBottomButton.tsx`):
+- No auto-scroll during streaming (user can read at their pace)
+- If user scrolls up, position is maintained
+- Floating "New messages" button appears when not at bottom
+- Button positioned above input area for easy access
 
 ### Evaluation SSE Flow
 
