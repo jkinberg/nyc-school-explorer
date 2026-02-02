@@ -1,4 +1,4 @@
-import { getSchoolProfile, getCitywideStats } from '@/lib/db/queries';
+import { getSchoolProfile, getCitywideStats, findSchoolsByNameOrDBN } from '@/lib/db/queries';
 import type { SchoolProfile } from '@/lib/db/queries';
 import type { ResponseContext } from '@/types/school';
 
@@ -9,6 +9,7 @@ export interface GetSchoolProfileParams {
 
 export interface GetSchoolProfileResult {
   profile: SchoolProfile | null;
+  suggestions?: Array<{ dbn: string; name: string; borough: string }>;
   _context: ResponseContext;
 }
 
@@ -22,10 +23,21 @@ const mapCategory = (cat: string | null): string | null => {
 /**
  * Get detailed profile for a specific school including trends across available years.
  * Now includes location, budget, suspension, and PTA data.
+ * Returns suggestions if the exact DBN is not found.
  */
 export function getSchoolProfileTool(params: GetSchoolProfileParams): GetSchoolProfileResult {
   const rawProfile = getSchoolProfile(params.dbn);
   const citywideStats = getCitywideStats('2024-25');
+
+  // If profile not found, search for suggestions
+  let suggestions: Array<{ dbn: string; name: string; borough: string }> | undefined;
+  if (!rawProfile) {
+    suggestions = findSchoolsByNameOrDBN(params.dbn, 5);
+    // Only include suggestions if we found any
+    if (suggestions.length === 0) {
+      suggestions = undefined;
+    }
+  }
 
   // Map category names in the profile
   const profile = rawProfile ? {
@@ -88,10 +100,10 @@ export function getSchoolProfileTool(params: GetSchoolProfileParams): GetSchoolP
     }
   }
 
-  return {
+  const result: GetSchoolProfileResult = {
     profile,
     _context: {
-      sample_size: 1,
+      sample_size: profile ? 1 : 0,
       data_year: '2024-25',
       citywide_medians: {
         impact: citywideStats?.median_impact_score || 0.50,
@@ -102,6 +114,12 @@ export function getSchoolProfileTool(params: GetSchoolProfileParams): GetSchoolP
       methodology_note: 'Profile includes both years of data when available. Similar schools are matched by ENI (±0.05) and enrollment (±20%). Budget data from LL16 reports, suspension data from LL93 reports, PTA data from DOE financial reporting.'
     }
   };
+
+  if (suggestions) {
+    result.suggestions = suggestions;
+  }
+
+  return result;
 }
 
 export const getSchoolProfileDefinition = {

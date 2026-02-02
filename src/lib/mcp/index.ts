@@ -28,6 +28,11 @@ CRITICAL: Apply ALL filters the user requests:
 - If user says "high-poverty" or "above economic need threshold" → include min_eni=0.85
 - Missing a user-specified filter is a serious error that returns incorrect results
 
+SCHOOL NAME SEARCH: Use the "query" parameter when users ask about schools by name.
+- "Tell me about Brooklyn Tech" → query="Brooklyn Tech"
+- "Find schools named Washington" → query="Washington"
+- If multiple matches found, present them to the user to clarify which school they mean.
+
 IMPORTANT USAGE GUIDANCE:
 - Results always include Economic Need (ENI) alongside performance metrics
 - Impact Score (student growth) is less confounded by poverty than Performance Score
@@ -36,6 +41,10 @@ IMPORTANT USAGE GUIDANCE:
     input_schema: {
       type: 'object',
       properties: {
+        query: {
+          type: 'string',
+          description: 'Search by school name or DBN. Single word matches both name and DBN. Multiple words must all appear in name (any order).'
+        },
         borough: {
           type: 'string',
           enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'],
@@ -69,7 +78,9 @@ IMPORTANT USAGE GUIDANCE:
   },
   {
     name: 'get_school_profile',
-    description: `Get detailed profile for a specific school including metrics across both years, trends, similar schools, location, budget, suspensions, and PTA data.`,
+    description: `Get detailed profile for a specific school including metrics across both years, trends, similar schools, location, budget, suspensions, and PTA data.
+
+If the exact DBN is not found, returns a "suggestions" array with up to 5 schools that match the search term. Use these suggestions to ask the user which school they meant.`,
     input_schema: {
       type: 'object',
       properties: {

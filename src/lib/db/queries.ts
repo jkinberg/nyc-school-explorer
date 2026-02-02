@@ -1,4 +1,5 @@
 import { getDatabase } from './connection';
+import { findFuzzyMatches } from '@/lib/utils/fuzzy';
 import type { School, SchoolMetrics, SchoolWithMetrics, CitywideStat, SchoolLocation, SchoolBudget, SchoolSuspension, PTAData } from '@/types/school';
 
 // ============================================================================
@@ -87,15 +88,23 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
     // Split query into words and match all of them (fuzzy AND matching)
     const words = params.query.trim().split(/\s+/).filter(w => w.length > 0);
     if (words.length === 1) {
-      // Single word: match name or DBN
-      conditions.push('(s.name LIKE ? OR s.dbn LIKE ?)');
-      const searchTerm = `%${words[0]}%`;
-      values.push(searchTerm, searchTerm);
+      // Single word: match name or DBN, including abbreviation variants
+      const variants = normalizeSchoolAbbreviations(words[0]);
+      const variantConditions = variants.map(() => 's.name LIKE ?').concat(variants.map(() => 's.dbn LIKE ?'));
+      conditions.push(`(${variantConditions.join(' OR ')})`);
+      variants.forEach(v => values.push(`%${v}%`));
+      variants.forEach(v => values.push(`%${v}%`));
     } else {
-      // Multiple words: all words must appear in name (in any order)
-      const wordConditions = words.map(() => 's.name LIKE ?');
+      // Multiple words: all words must appear in name (with variants)
+      const wordConditions = words.map(word => {
+        const variants = normalizeSchoolAbbreviations(word);
+        return `(${variants.map(() => 's.name LIKE ?').join(' OR ')})`;
+      });
       conditions.push(`(${wordConditions.join(' AND ')})`);
-      words.forEach(word => values.push(`%${word}%`));
+      words.forEach(word => {
+        const variants = normalizeSchoolAbbreviations(word);
+        variants.forEach(v => values.push(`%${v}%`));
+      });
     }
   }
 
@@ -212,15 +221,23 @@ export function countSchools(params: Omit<SearchParams, 'limit' | 'offset'>): nu
     // Split query into words and match all of them (fuzzy AND matching)
     const words = params.query.trim().split(/\s+/).filter(w => w.length > 0);
     if (words.length === 1) {
-      // Single word: match name or DBN
-      conditions.push('(s.name LIKE ? OR s.dbn LIKE ?)');
-      const searchTerm = `%${words[0]}%`;
-      values.push(searchTerm, searchTerm);
+      // Single word: match name or DBN, including abbreviation variants
+      const variants = normalizeSchoolAbbreviations(words[0]);
+      const variantConditions = variants.map(() => 's.name LIKE ?').concat(variants.map(() => 's.dbn LIKE ?'));
+      conditions.push(`(${variantConditions.join(' OR ')})`);
+      variants.forEach(v => values.push(`%${v}%`));
+      variants.forEach(v => values.push(`%${v}%`));
     } else {
-      // Multiple words: all words must appear in name (in any order)
-      const wordConditions = words.map(() => 's.name LIKE ?');
+      // Multiple words: all words must appear in name (with variants)
+      const wordConditions = words.map(word => {
+        const variants = normalizeSchoolAbbreviations(word);
+        return `(${variants.map(() => 's.name LIKE ?').join(' OR ')})`;
+      });
       conditions.push(`(${wordConditions.join(' AND ')})`);
-      words.forEach(word => values.push(`%${word}%`));
+      words.forEach(word => {
+        const variants = normalizeSchoolAbbreviations(word);
+        variants.forEach(v => values.push(`%${v}%`));
+      });
     }
   }
 
@@ -623,6 +640,115 @@ export interface SchoolProfile {
   budgets: SchoolBudget[];
   suspensions: SchoolSuspension[];
   pta: PTAData[];
+}
+
+/**
+ * Normalize search terms to handle common abbreviations.
+ * E.g., "PS" → "P.S.", "IS" → "I.S.", "MS" → "M.S.", "JHS" → "J.H.S."
+ */
+function normalizeSchoolAbbreviations(word: string): string[] {
+  const upper = word.toUpperCase();
+  const variants = [word];
+
+  // Common school abbreviations
+  const abbreviations: Record<string, string> = {
+    'PS': 'P.S.',
+    'IS': 'I.S.',
+    'MS': 'M.S.',
+    'JHS': 'J.H.S.',
+    'HS': 'H.S.',
+  };
+
+  if (abbreviations[upper]) {
+    variants.push(abbreviations[upper]);
+  }
+
+  // Also try adding periods between letters for 2-3 letter words
+  if (word.length >= 2 && word.length <= 3 && /^[A-Za-z]+$/.test(word)) {
+    const withDots = word.split('').join('.') + '.';
+    if (!variants.includes(withDots)) {
+      variants.push(withDots);
+    }
+  }
+
+  return variants;
+}
+
+/**
+ * Find schools by name or DBN search term.
+ * Used for fallback suggestions when exact DBN lookup fails.
+ * Falls back to fuzzy (Levenshtein) matching if LIKE search returns no results.
+ */
+export function findSchoolsByNameOrDBN(search: string, limit: number = 5): Array<{ dbn: string; name: string; borough: string }> {
+  const db = getDatabase();
+
+  // Split into words for multi-word matching
+  const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+
+  if (words.length === 0) return [];
+
+  const conditions: string[] = ['m.year = ?'];
+  const values: (string | number)[] = ['2024-25'];
+
+  if (words.length === 1) {
+    // Single word: match name or DBN, including abbreviation variants
+    const variants = normalizeSchoolAbbreviations(words[0]);
+    const variantConditions = variants.map(() => 's.name LIKE ?').concat(variants.map(() => 's.dbn LIKE ?'));
+    conditions.push(`(${variantConditions.join(' OR ')})`);
+    variants.forEach(v => values.push(`%${v}%`));
+    variants.forEach(v => values.push(`%${v}%`));
+  } else {
+    // Multiple words: all words must appear in name (with variants)
+    const wordConditions = words.map(word => {
+      const variants = normalizeSchoolAbbreviations(word);
+      return `(${variants.map(() => 's.name LIKE ?').join(' OR ')})`;
+    });
+    conditions.push(`(${wordConditions.join(' AND ')})`);
+    words.forEach(word => {
+      const variants = normalizeSchoolAbbreviations(word);
+      variants.forEach(v => values.push(`%${v}%`));
+    });
+  }
+
+  // Prioritize exact DBN match, then order by name
+  const sql = `
+    SELECT DISTINCT s.dbn, s.name, s.borough
+    FROM schools s
+    JOIN school_metrics m ON s.dbn = m.dbn
+    WHERE ${conditions.join(' AND ')}
+    ORDER BY
+      CASE WHEN UPPER(s.dbn) = UPPER(?) THEN 0 ELSE 1 END,
+      s.name
+    LIMIT ?
+  `;
+
+  values.push(search, limit);
+
+  const likeResults = db.prepare(sql).all(...values) as Array<{ dbn: string; name: string; borough: string }>;
+
+  // If LIKE search found results, return them
+  if (likeResults.length > 0) {
+    return likeResults;
+  }
+
+  // Fuzzy fallback: load all school names and find closest matches
+  // Only triggers when LIKE returns nothing (e.g., typos like "Stuyvesent")
+  const allSchools = db.prepare(`
+    SELECT DISTINCT s.dbn, s.name, s.borough
+    FROM schools s
+    JOIN school_metrics m ON s.dbn = m.dbn
+    WHERE m.year = '2024-25'
+  `).all() as Array<{ dbn: string; name: string; borough: string }>;
+
+  const fuzzyMatches = findFuzzyMatches(
+    search,
+    allSchools,
+    (school) => school.name,
+    3,  // max edit distance
+    limit
+  );
+
+  return fuzzyMatches.map(m => m.item);
 }
 
 export function getSchoolProfile(dbn: string): SchoolProfile | null {

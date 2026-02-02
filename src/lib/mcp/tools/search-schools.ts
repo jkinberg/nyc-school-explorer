@@ -2,6 +2,7 @@ import { searchSchools, countSchools, getCitywideStats } from '@/lib/db/queries'
 import type { SchoolWithMetrics, ResponseContext } from '@/types/school';
 
 export interface SearchSchoolsParams {
+  query?: string;  // Search by school name or DBN (partial match)
   borough?: 'Manhattan' | 'Bronx' | 'Brooklyn' | 'Queens' | 'Staten Island';
   report_type?: 'EMS' | 'HS' | 'HST' | 'EC' | 'D75';
   min_impact_score?: number;
@@ -43,6 +44,7 @@ export function searchSchoolsTool(params: SearchSchoolsParams): SearchSchoolsRes
 
   // Map parameters to query format
   const queryParams = {
+    query: params.query,
     borough: params.borough,
     reportType: params.report_type,
     minImpactScore: params.min_impact_score,
