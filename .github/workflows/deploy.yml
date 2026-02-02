@@ -48,5 +48,5 @@ jobs:
             --cpu=1 \
             --min-instances=0 \
             --max-instances=10 \
-            --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest \
+            --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,ZAPIER_WEBHOOK_URL=ZAPIER_WEBHOOK_URL:latest \
             --set-env-vars=NODE_ENV=production,ENABLE_EVALUATION=true

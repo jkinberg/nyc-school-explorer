@@ -7,6 +7,7 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Natural language chat** powered by Claude for querying NYC school data
 - **Three-layer AI guardrails**: pre-filter, system prompt, and tool-level context to ensure responsible framing
 - **LLM-as-judge evaluation**: every response is scored on factual accuracy, context inclusion, limitation acknowledgment, responsible framing, and query relevance -- scores are shown in the chat UI
+- **Evaluation logging**: low-scoring responses (< 75) are auto-logged; users can flag any response with feedback via modal
 - **MCP tools** for school search, profiles, correlations, charts, and curated lists
 - **Interactive charts** via Recharts for data visualization
 - **School profiles** with year-over-year comparison
@@ -54,6 +55,7 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 | `GEMINI_API_KEY` | No | -- | Google Gemini API key for LLM-as-judge evaluation |
 | `ENABLE_EVALUATION` | No | `true` | Set to `false` to disable LLM-as-judge response scoring |
 | `RATE_LIMIT_ENABLED` | No | `true` | Set to `false` to disable rate limiting |
+| `ZAPIER_WEBHOOK_URL` | No | -- | Zapier webhook URL for logging evaluations to Google Sheets |
 
 ## Data Sources
 
@@ -73,6 +75,17 @@ The app exposes an MCP (Model Context Protocol) HTTP endpoint at `/api/mcp` that
 - **No authentication required**
 
 See [docs/mcp-api.md](docs/mcp-api.md) for full API documentation.
+
+## Evaluation Logging
+
+The system logs AI responses for quality review:
+
+- **Auto-logging**: Responses with evaluation score < 75 are automatically logged
+- **User flagging**: Users can click "Flag" on any response to submit feedback via modal
+- **Storage**: Logs are sent to Zapier webhook (for Google Sheets) and saved locally to `logs/evaluations.jsonl`
+- **Analysis**: Run `npx tsx scripts/analyze-logs.ts` to analyze logged responses
+
+See [docs/evaluation-logging.md](docs/evaluation-logging.md) for Zapier/Google Sheets setup.
 
 ## Deployment
 

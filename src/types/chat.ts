@@ -102,6 +102,34 @@ export interface EvaluationResult {
   weighted_score: number;           // 0-100
   flags: string[];
   summary: string;
+  auto_logged?: boolean;            // True if response was auto-logged for review
+}
+
+// Evaluation logging types
+export interface EvaluationLogEntry {
+  id: string;
+  timestamp: string;
+  log_type: 'auto' | 'user_flagged';
+  user_query: string;
+  assistant_response: string;
+  tool_calls: Array<{ name: string; parameters: Record<string, unknown> }>;
+  evaluation: {
+    scores: EvaluationResult['scores'];
+    weighted_score: number;
+    confidence_level: string;
+    flags: string[];
+    summary: string;
+  };
+  user_feedback?: string;
+}
+
+export interface FlagResponseRequest {
+  message_id: string;
+  user_query: string;
+  assistant_response: string;
+  tool_calls?: Array<{ name: string; parameters: Record<string, unknown> }>;
+  evaluation?: EvaluationResult;
+  feedback: string;
 }
 
 // Confidence badge based on evaluation

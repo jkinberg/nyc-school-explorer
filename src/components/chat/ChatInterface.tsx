@@ -22,6 +22,7 @@ interface Message {
   charts?: ChartData[];
   toolExecutions?: ToolExecution[];
   schoolMappings?: SchoolMapping;
+  userQuery?: string; // The user query this response answers (for flagging)
 }
 
 interface SuggestedQuery {
@@ -122,7 +123,7 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
       inputRef.current.style.height = 'auto';
     }
 
-    // Add loading message
+    // Add loading message with reference to user query for flagging
     const loadingId = generateId();
     setMessages(prev => [...prev, {
       id: loadingId,
@@ -130,7 +131,8 @@ export function ChatInterface({ initialQuery }: ChatInterfaceProps) {
       content: '',
       timestamp: new Date(),
       isLoading: true,
-      toolExecutions: []
+      toolExecutions: [],
+      userQuery: messageText.trim() // Store the user query this response answers
     }]);
     setIsLoading(true);
 

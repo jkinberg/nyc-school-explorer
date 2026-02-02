@@ -1,6 +1,7 @@
 'use client';
 
 import { ConfidenceBadge } from './ConfidenceBadge';
+import { FlagButton } from './FlagButton';
 import { ChartRenderer } from './ChartRenderer';
 import { MarkdownRenderer, SchoolMapping } from './MarkdownRenderer';
 import { ToolCallDisplay, ToolExecution } from './ToolCallDisplay';
@@ -18,6 +19,7 @@ interface Message {
   charts?: ChartData[];
   toolExecutions?: ToolExecution[];
   schoolMappings?: SchoolMapping;
+  userQuery?: string; // The user query this response answers (for flagging)
 }
 
 interface MessageBubbleProps {
@@ -74,7 +76,26 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </p>
         )}
         {message.evaluation && (
-          <ConfidenceBadge evaluation={message.evaluation} />
+          <div className="flex items-start justify-between gap-2">
+            <ConfidenceBadge evaluation={message.evaluation} />
+            <FlagButton
+              messageId={message.id}
+              userQuery={message.userQuery || ''}
+              assistantResponse={message.content}
+              toolCalls={message.toolExecutions}
+              evaluation={message.evaluation}
+            />
+          </div>
+        )}
+        {!message.evaluation && !message.isEvaluating && !message.isLoading && !message.isStreaming && message.content && (
+          <div className="mt-2 flex justify-end">
+            <FlagButton
+              messageId={message.id}
+              userQuery={message.userQuery || ''}
+              assistantResponse={message.content}
+              toolCalls={message.toolExecutions}
+            />
+          </div>
         )}
       </div>
     </div>

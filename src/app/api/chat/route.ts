@@ -13,6 +13,7 @@ import {
   getRateLimitHeaders
 } from '@/lib/utils/rate-limit';
 import { generateId } from '@/lib/utils/formatting';
+import { logEvaluation, shouldAutoLog } from '@/lib/logging/evaluation-logger';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic();
@@ -141,6 +142,7 @@ export async function POST(request: NextRequest) {
         let accumulatedText = '';
         const toolResults: string[] = [];
         const toolNames: string[] = [];
+        const toolCallsForLogging: Array<{ name: string; parameters: Record<string, unknown> }> = [];
         let totalUsage = { input_tokens: 0, output_tokens: 0 };
 
         // Conversation messages grow with each tool-use iteration
@@ -191,6 +193,10 @@ export async function POST(request: NextRequest) {
 
                 // Emit enhanced tool_start event with id and parameters
                 const toolParams = toolUse.input as Record<string, unknown>;
+
+                // Track tool calls with parameters for evaluation logging
+                toolCallsForLogging.push({ name: toolUse.name, parameters: toolParams });
+
                 controller.enqueue(encoder.encode(sseEvent('tool_start', {
                   id: toolUse.id,
                   name: toolUse.name,
@@ -386,7 +392,25 @@ export async function POST(request: NextRequest) {
                 if (evaluation === TIMEOUT) {
                   console.warn('Evaluation timed out after 30s');
                 } else if (evaluation) {
-                  controller.enqueue(encoder.encode(sseEvent('evaluation', evaluation)));
+                  // Check if this response should be auto-logged
+                  const wasAutoLogged = shouldAutoLog(evaluation);
+
+                  if (wasAutoLogged) {
+                    // Auto-log the evaluation (fire-and-forget)
+                    logEvaluation({
+                      userQuery: latestUserMessage.content,
+                      assistantResponse: accumulatedText,
+                      toolCalls: toolCallsForLogging,
+                      evaluation,
+                      logType: 'auto'
+                    }).catch(err => console.error('Auto-log failed:', err));
+                  }
+
+                  // Include auto_logged flag in evaluation SSE event
+                  controller.enqueue(encoder.encode(sseEvent('evaluation', {
+                    ...evaluation,
+                    auto_logged: wasAutoLogged
+                  })));
                 } else {
                   console.warn('Evaluation returned null (parse failure or missing API key)');
                 }

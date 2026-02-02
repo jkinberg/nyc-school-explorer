@@ -81,6 +81,7 @@ gcloud artifacts repositories create nyc-school-explorer \
 ```bash
 echo -n "your-anthropic-key" | gcloud secrets create ANTHROPIC_API_KEY --data-file=-
 echo -n "your-gemini-key" | gcloud secrets create GEMINI_API_KEY --data-file=-
+echo -n "https://hooks.zapier.com/hooks/catch/xxx/yyy/" | gcloud secrets create ZAPIER_WEBHOOK_URL --data-file=-
 ```
 
 ### 5. Create Service Account for GitHub Actions
@@ -162,6 +163,7 @@ GitHub Actions will:
 |----------|--------|----------|
 | `ANTHROPIC_API_KEY` | Secret Manager | Yes |
 | `GEMINI_API_KEY` | Secret Manager | No (but recommended) |
+| `ZAPIER_WEBHOOK_URL` | Secret Manager | No (for evaluation logging) |
 | `NODE_ENV` | Set in deploy command | Yes (`production`) |
 | `ENABLE_EVALUATION` | Set in deploy command | No (default `true`) |
 
