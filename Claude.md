@@ -41,6 +41,7 @@ src/
 │   ├── school/[dbn]/page.tsx     # Individual school profile
 │   └── api/
 │       ├── chat/route.ts         # Main chat endpoint with Claude
+│       ├── flag/route.ts         # User feedback flagging endpoint
 │       └── schools/              # REST API for school data
 ├── components/
 │   ├── chat/                     # Chat interface components
@@ -50,7 +51,8 @@ src/
 │   │   ├── ToolCallDisplay.tsx   # Collapsible MCP tool execution cards
 │   │   ├── ScrollToBottomButton.tsx  # Floating scroll button
 │   │   ├── ChartRenderer.tsx     # Recharts visualization
-│   │   ├── ConfidenceBadge.tsx   # LLM-as-judge score display
+│   │   ├── ConfidenceBadge.tsx   # LLM-as-judge score display + auto-logged indicator
+│   │   ├── FlagButton.tsx        # User feedback modal for flagging responses
 │   │   └── SuggestedQueries.tsx  # Follow-up query suggestions
 │   ├── schools/                  # School display components
 │   └── common/                   # Shared components
@@ -64,13 +66,20 @@ src/
 │   ├── db/                       # Database layer
 │   │   ├── connection.ts         # SQLite connection
 │   │   └── queries.ts            # Query functions
+│   ├── logging/                  # Evaluation logging
+│   │   └── evaluation-logger.ts  # Log low-scoring/flagged responses to Zapier + JSONL
 │   ├── mcp/                      # MCP tools
 │   │   ├── index.ts              # Tool definitions & executor
 │   │   └── tools/                # Individual tool implementations
 │   └── utils/                    # Helpers (formatting, rate-limit, fuzzy search)
-└── types/                        # TypeScript types
-    ├── school.ts                 # School-related types
-    └── chat.ts                   # Chat-related types
+├── types/                        # TypeScript types
+│   ├── school.ts                 # School-related types
+│   └── chat.ts                   # Chat-related types
+scripts/
+│   ├── seed-database.ts          # Database seeding script
+│   └── analyze-logs.ts           # Analyze evaluation logs from JSONL
+logs/
+│   └── evaluations.jsonl         # Local backup of logged evaluations
 ```
 
 ## Key Concepts
@@ -130,7 +139,7 @@ When querying categories:
 
 | Tool | Purpose |
 |------|---------|
-| `search_schools` | Filter schools by borough, category, metrics. Supports `query` param for name/DBN search |
+| `search_schools` | Filter schools by borough, category, metrics. Supports `query` param for name/DBN search, `sort_by` and `sort_order` for custom sorting |
 | `get_school_profile` | Detailed school view with YoY comparison. Returns suggestions if DBN not found |
 | `find_similar_schools` | Find peer schools by ENI (±5%) and enrollment (±20%) |
 | `analyze_correlations` | Calculate correlation between metrics |
@@ -181,6 +190,7 @@ The system supports flexible school name searching with several features:
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/api/chat` | POST | Main chat endpoint, accepts `{ messages: Message[] }` |
+| `/api/flag` | POST | User feedback flagging, accepts `{ message_id, user_query, assistant_response, feedback }` |
 | `/api/schools` | GET | Search schools with query params |
 | `/api/schools/[dbn]` | GET | Get individual school profile |
 | `/api/schools/gems` | GET | Get curated lists (type=high_growth\|persistent_high_growth\|high_growth_high_achievement) |
@@ -201,6 +211,17 @@ The `/api/mcp` endpoint allows external AI agents (Claude Desktop, other MCP cli
 - `analyze_correlations`, `generate_chart`, `explain_metrics`, `get_curated_lists`
 
 See [docs/mcp-api.md](docs/mcp-api.md) for full documentation.
+
+## Evaluation Logging
+
+The system logs AI responses with poor evaluation scores (< 75) and user-flagged responses for review.
+
+- **Auto-logging**: Responses with `weighted_score < 75` are automatically logged
+- **User flagging**: Users can click "Flag" on any response to submit feedback
+- **Storage**: Logs go to Zapier webhook (for Google Sheets) and local `logs/evaluations.jsonl` backup
+- **Analysis**: Run `npx tsx scripts/analyze-logs.ts` to analyze logged responses
+
+See [docs/evaluation-logging.md](docs/evaluation-logging.md) for Zapier/Google Sheets setup instructions.
 
 ## Important Patterns
 
@@ -315,6 +336,7 @@ Raw Excel files are in `/Users/josh/Projects/nyc-schools-data/data-samples/raw/`
 ANTHROPIC_API_KEY=sk-ant-...    # Required for chat functionality
 GEMINI_API_KEY=...              # Required for LLM-as-judge evaluation (Gemini Flash)
 ENABLE_EVALUATION=true          # Set to "false" to disable LLM-as-judge evaluation (default: enabled)
+ZAPIER_WEBHOOK_URL=...          # Optional: Zapier webhook for evaluation logging to Google Sheets
 ```
 
 ## Common Tasks

@@ -154,7 +154,7 @@ Execute a tool and return results.
 
 | Tool | Purpose |
 |------|---------|
-| `search_schools` | Filter schools by borough, category, metrics |
+| `search_schools` | Filter schools by borough, category, metrics; supports sorting by any metric |
 | `get_school_profile` | Detailed school view with trends |
 | `find_similar_schools` | Find peer schools by ENI/enrollment |
 | `analyze_correlations` | Calculate correlation between metrics |
@@ -178,6 +178,24 @@ Find Brooklyn schools with high impact scores:
   }
 }
 ```
+
+Find EMS schools with lowest student attendance (sorted ascending):
+
+```json
+{
+  "name": "search_schools",
+  "arguments": {
+    "report_type": "EMS",
+    "sort_by": "student_attendance",
+    "sort_order": "asc",
+    "limit": 10
+  }
+}
+```
+
+**Sorting options:**
+- `sort_by`: `impact_score`, `performance_score`, `economic_need_index`, `enrollment`, `student_attendance`, `teacher_attendance`, `name`
+- `sort_order`: `asc` (lowest first) or `desc` (highest first, default)
 
 #### get_school_profile
 
