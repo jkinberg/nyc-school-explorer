@@ -136,6 +136,31 @@ Also strengthened rule #3 in Strict Data Integrity Rules:
 
 ---
 
+## Phase 5: Search Sorting Capability (Feature Addition)
+
+**Problem discovered**: Users couldn't query for schools sorted by specific metrics like "lowest attendance rates" - results were always sorted by impact_score descending.
+
+**Files**: `src/lib/db/queries.ts`, `src/lib/mcp/tools/search-schools.ts`
+
+Added sorting parameters to `search_schools` tool:
+
+- `sort_by`: `impact_score`, `performance_score`, `economic_need_index`, `enrollment`, `student_attendance`, `teacher_attendance`, `name`
+- `sort_order`: `asc` (lowest first) or `desc` (highest first, default)
+- NULLs are always sorted last regardless of direction
+- Uses whitelist validation to prevent SQL injection
+
+**Example query**: "Show me the 10 EMS schools with lowest student attendance"
+
+| School | Attendance |
+|--------|------------|
+| Harlem Prep Charter School | 71.3% |
+| EMBER Charter School | 72.5% |
+| Brooklyn Laboratory Charter School | 72.7% |
+| Cultural Arts Academy Charter | 75.0% |
+| P.S./I.S. 157 Benjamin Franklin | 76.0% |
+
+---
+
 ## Files Modified
 
 | File | Change |
@@ -143,6 +168,8 @@ Also strengthened rule #3 in Strict Data Integrity Rules:
 | `src/lib/ai/system-prompt.ts` | Add "Strict Data Integrity Rules" section + "Data Availability" table |
 | `src/components/chat/ChartRenderer.tsx` | Add empty data state UI |
 | `src/lib/mcp/tools/generate-chart.ts` | Add explicit error context for empty results |
+| `src/lib/db/queries.ts` | Add sortBy/sortOrder params with whitelist validation |
+| `src/lib/mcp/tools/search-schools.ts` | Expose sort_by and sort_order in tool definition |
 
 ---
 
@@ -208,6 +235,7 @@ Look for:
 ```
 31b1e01 Fix data hallucination and chart empty state issues
 b31743b Add data availability table to prevent false claims about missing data
+4ce7fc2 Add sorting capability to search_schools tool
 ```
 
 Deployed to production via GitHub Actions CI/CD on 2026-02-03.
