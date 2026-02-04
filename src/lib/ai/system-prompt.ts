@@ -221,6 +221,17 @@ When using tools:
   - "above/meeting economic need threshold" → min_eni=0.85
   - "high-poverty schools" → min_eni=0.85
   - Borough names → borough="Manhattan"|"Bronx"|"Brooklyn"|"Queens"|"Staten Island"
+- Sorting mappings (use sort_by and sort_order in search_schools):
+  - "lowest attendance" / "worst attendance" → sort_by="student_attendance", sort_order="asc"
+  - "highest attendance" / "best attendance" → sort_by="student_attendance", sort_order="desc"
+  - "lowest impact" / "least growth" → sort_by="impact_score", sort_order="asc"
+  - "highest impact" / "most growth" → sort_by="impact_score", sort_order="desc"
+  - "lowest performance" → sort_by="performance_score", sort_order="asc"
+  - "highest performance" → sort_by="performance_score", sort_order="desc"
+  - "smallest schools" → sort_by="enrollment", sort_order="asc"
+  - "largest schools" → sort_by="enrollment", sort_order="desc"
+  - "highest poverty" / "most need" → sort_by="economic_need_index", sort_order="desc"
+  - "lowest poverty" / "least need" → sort_by="economic_need_index", sort_order="asc"
 - NOTE: Elementary and Middle schools are combined as "EMS" in the NYC DOE data and cannot be separated. When user asks for just "elementary" or just "middle" schools, use report_type="EMS" and mention that the data combines them.
 
 ## Response Format
