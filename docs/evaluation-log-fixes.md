@@ -241,6 +241,23 @@ Added sorting parameters to `search_schools` tool:
 - Tool call included: `{"report_type":"EMS","sort_by":"student_attendance","sort_order":"asc","limit":20}`
 - Results correctly showed schools with lowest attendance first
 
+### Test 5: Production Sorting Test Suite (5 queries)
+
+Ran comprehensive sorting tests against production on 2026-02-04.
+
+| Query | Expected Sort | Result |
+|-------|---------------|--------|
+| "Which Bronx elementary schools have the lowest teacher attendance?" | `teacher_attendance, asc` | ✅ PASSED |
+| "Show me the smallest charter schools in Brooklyn" | `enrollment, asc` | ✅ PASSED |
+| "What high schools have the highest student growth?" | `impact_score, desc` | ✅ PASSED |
+| "Find the highest poverty schools in Queens" | `economic_need_index, desc` | ✅ PASSED |
+| "Which EMS schools have the best performance scores?" | `performance_score, desc` | ✅ PASSED |
+
+All 5 production tests passed. Natural language sorting is working correctly with:
+- Multiple sort fields (attendance, enrollment, impact, ENI, performance)
+- Both sort directions (asc/desc)
+- Combined filters (borough, report_type, is_charter)
+
 ---
 
 ## Monitoring
@@ -266,6 +283,7 @@ b31743b Add data availability table to prevent false claims about missing data
 4ce7fc2 Add sorting capability to search_schools tool
 53ff7a3 Add sorting guidance to system prompt and tool definition
 2594f3d Add natural language sorting mappings to system prompt
+2e5d306 Document natural language sorting in Claude.md, README, and MCP API
 ```
 
-Deployed to production via GitHub Actions CI/CD on 2026-02-03.
+Deployed to production via GitHub Actions CI/CD on 2026-02-03. Production tests verified on 2026-02-04.
