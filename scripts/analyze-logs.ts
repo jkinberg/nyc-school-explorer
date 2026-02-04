@@ -64,31 +64,91 @@ function parseCSVLine(line: string): string[] {
 }
 
 function parseCSV(content: string): Record<string, string>[] {
-  const lines = content.split('\n').filter(line => line.trim());
-  if (lines.length < 2) return [];
+  // Handle multi-line quoted fields by parsing character by character
+  const records: string[][] = [];
+  let currentRecord: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
 
-  const headers = parseCSVLine(lines[0]);
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+
+    if (char === '"') {
+      if (inQuotes && content[i + 1] === '"') {
+        // Escaped quote
+        currentField += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      currentRecord.push(currentField);
+      currentField = '';
+    } else if (char === '\n' && !inQuotes) {
+      currentRecord.push(currentField);
+      if (currentRecord.some(f => f.trim())) {
+        records.push(currentRecord);
+      }
+      currentRecord = [];
+      currentField = '';
+    } else if (char !== '\r') {
+      currentField += char;
+    }
+  }
+  // Handle last record
+  if (currentField || currentRecord.length > 0) {
+    currentRecord.push(currentField);
+    if (currentRecord.some(f => f.trim())) {
+      records.push(currentRecord);
+    }
+  }
+
+  if (records.length < 2) return [];
+
+  // Trim whitespace from headers (Google Sheets sometimes adds trailing spaces)
+  const headers = records[0].map(h => h.trim().toLowerCase());
   const rows: Record<string, string>[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
+  for (let i = 1; i < records.length; i++) {
+    const values = records[i];
     const row: Record<string, string> = {};
     for (let j = 0; j < headers.length; j++) {
-      row[headers[j]] = values[j] || '';
+      row[headers[j]] = (values[j] || '').trim();
     }
-    rows.push(row);
+    // Skip rows without essential data
+    if (row.id && row.log_type) {
+      rows.push(row);
+    }
   }
 
   return rows;
 }
 
+function parseTimestamp(timestamp: string): string {
+  if (!timestamp) return '';
+  // If already ISO format, return as-is
+  if (timestamp.includes('T')) return timestamp;
+  // Parse Google Sheets format: M/D/YYYY H:MM:SS
+  const match = timestamp.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)/);
+  if (match) {
+    const [, month, day, year, hour, min, sec] = match;
+    return new Date(
+      parseInt(year), parseInt(month) - 1, parseInt(day),
+      parseInt(hour), parseInt(min), parseInt(sec)
+    ).toISOString();
+  }
+  return timestamp;
+}
+
 function csvRowToEntry(row: Record<string, string>): EvaluationLogEntry {
   // Convert flat CSV row back to nested structure
   const toolNames = row.tool_names ? row.tool_names.split(', ').filter(Boolean) : [];
+  // Flags use semicolon separator in Google Sheets export
+  const flags = row.flags ? row.flags.split(';').map(f => f.trim()).filter(Boolean) : [];
 
   return {
     id: row.id,
-    timestamp: row.timestamp,
+    timestamp: parseTimestamp(row.timestamp),
     log_type: row.log_type as 'auto' | 'user_flagged',
     user_query: row.user_query,
     assistant_response: row.assistant_response_preview || '',
@@ -103,7 +163,7 @@ function csvRowToEntry(row: Record<string, string>): EvaluationLogEntry {
       },
       weighted_score: parseInt(row.weighted_score) || 0,
       confidence_level: row.confidence_level || '',
-      flags: row.flags ? row.flags.split(', ').filter(Boolean) : [],
+      flags,
       summary: row.summary || '',
     },
     user_feedback: row.user_feedback || undefined,
@@ -271,13 +331,18 @@ async function main() {
   }
 
   // Date range
-  const timestamps = entries.map(e => new Date(e.timestamp));
-  const oldest = new Date(Math.min(...timestamps.map(d => d.getTime())));
-  const newest = new Date(Math.max(...timestamps.map(d => d.getTime())));
+  const validTimestamps = entries
+    .map(e => new Date(e.timestamp))
+    .filter(d => !isNaN(d.getTime()));
 
-  console.log(`\nDate Range:`);
-  console.log(`  From: ${oldest.toISOString()}`);
-  console.log(`  To: ${newest.toISOString()}`);
+  if (validTimestamps.length > 0) {
+    const oldest = new Date(Math.min(...validTimestamps.map(d => d.getTime())));
+    const newest = new Date(Math.max(...validTimestamps.map(d => d.getTime())));
+
+    console.log(`\nDate Range:`);
+    console.log(`  From: ${oldest.toISOString()}`);
+    console.log(`  To: ${newest.toISOString()}`);
+  }
 }
 
 main().catch(console.error);
