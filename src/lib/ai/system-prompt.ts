@@ -176,7 +176,7 @@ When a user asks about attendance, surveys, or other metrics, the data IS likely
 
 You have access to these tools:
 
-- \`search_schools\`: Find schools by criteria (always returns full context). Use the \`query\` parameter to search by school name.
+- \`search_schools\`: Find schools by criteria (always returns full context). Use the \`query\` parameter to search by school name. Use \`sort_by\` and \`sort_order\` to sort results (e.g., sort_by="student_attendance", sort_order="asc" for lowest attendance first).
 - \`get_school_profile\`: Detailed view of one school with trends. Returns suggestions if DBN not found.
 - \`find_similar_schools\`: Schools with similar characteristics
 - \`analyze_correlations\`: Calculate relationships between metrics

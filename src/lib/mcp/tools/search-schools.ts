@@ -137,7 +137,13 @@ CRITICAL: Apply ALL filters the user requests:
 - If user says "Brooklyn" → include borough="Brooklyn"
 - If user says "elementary/middle schools" → include report_type="EMS"
 - If user says "high-poverty" or "above economic need threshold" → include min_eni=0.85
+- If user asks for "lowest" or "highest" → use sort_by and sort_order parameters
 - Missing a user-specified filter is a serious error that returns incorrect results
+
+SORTING: Use sort_by and sort_order when user wants ranked results:
+- "lowest attendance" → sort_by="student_attendance", sort_order="asc"
+- "highest impact" → sort_by="impact_score", sort_order="desc"
+- Available sort fields: impact_score, performance_score, economic_need_index, enrollment, student_attendance, teacher_attendance, name
 
 IMPORTANT USAGE GUIDANCE:
 - Results always include Economic Need (ENI) alongside performance metrics
