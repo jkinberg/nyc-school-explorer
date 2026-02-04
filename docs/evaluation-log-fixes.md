@@ -101,11 +101,46 @@ if (chartData.length === 0) {
 
 ---
 
+## Phase 4: Data Availability Documentation (Follow-up Fix)
+
+**Problem discovered**: AI was claiming only ~65 EMS schools have attendance data when actually 96% (1,312/1,362) have it. The AI was extrapolating incorrectly from small samples with some null values.
+
+**File**: `src/lib/ai/system-prompt.ts`
+
+Added "Data Availability by School Type" table:
+
+```
+### Data Availability by School Type
+
+Most metrics are available for most schools. Do NOT claim data is unavailable without checking:
+
+| Metric | EMS | HS | D75/HST |
+|--------|-----|-----|---------|
+| student_attendance | 96% | 100% | No |
+| teacher_attendance | 96% | 100% | No |
+| Impact Score | 95%+ | 95%+ | Limited |
+| Performance Score | 95%+ | 95%+ | Limited |
+| ENI | 99%+ | 99%+ | 99%+ |
+| Survey scores | 90%+ | 90%+ | Varies |
+| PTA income | ~60% | ~40% | Limited |
+| Budget (FSF) | 95%+ | 95%+ | 95%+ |
+
+When a user asks about attendance, surveys, or other metrics, the data IS likely available. Check the tool results before claiming otherwise.
+```
+
+Also strengthened rule #3 in Strict Data Integrity Rules:
+
+```
+3. **Verify before claiming absence**: Before stating "I don't have access to X data," check if the field exists in the tool results. Most EMS and HS schools (95%+) have attendance, survey, and budget data. If you query 10 schools and see some nulls, that does NOT mean the data is broadly unavailable—it means those specific schools lack it.
+```
+
+---
+
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/lib/ai/system-prompt.ts` | Add "Strict Data Integrity Rules" section |
+| `src/lib/ai/system-prompt.ts` | Add "Strict Data Integrity Rules" section + "Data Availability" table |
 | `src/components/chat/ChartRenderer.tsx` | Add empty data state UI |
 | `src/lib/mcp/tools/generate-chart.ts` | Add explicit error context for empty results |
 
@@ -142,6 +177,15 @@ if (chartData.length === 0) {
 **Result**: PASSED
 - Claude said "Among Elementary/Middle Schools in the Bronx, there are 4 charter schools in the High Growth category out of 15 total high-growth schools"
 
+### Test 3: Data Availability Accuracy
+**Query**: "Do you have student attendance data for EMS schools?"
+
+**Expected**:
+- Claude correctly states that attendance data is available for most EMS schools (~96%)
+
+**Result**: PASSED
+- Claude said "Yes, I do have student attendance data for EMS (Elementary/Middle Schools) schools! Student attendance data is available for approximately 96% of EMS schools in the dataset."
+
 ---
 
 ## Monitoring
@@ -159,10 +203,11 @@ Look for:
 
 ---
 
-## Commit
+## Commits
 
 ```
 31b1e01 Fix data hallucination and chart empty state issues
+b31743b Add data availability table to prevent false claims about missing data
 ```
 
 Deployed to production via GitHub Actions CI/CD on 2026-02-03.
