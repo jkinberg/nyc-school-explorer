@@ -166,6 +166,25 @@ The system supports flexible school name searching with several features:
 - Suggestions use LIKE matching first, then Levenshtein fuzzy matching
 - Example: `get_school_profile({ dbn: "Brooklyn Tech" })` returns suggestions
 
+### Natural Language Sorting
+
+The AI understands natural language sorting requests and maps them to `sort_by`/`sort_order` parameters:
+
+| User Says | Maps To |
+|-----------|---------|
+| "worst attendance" / "lowest attendance" | `sort_by="student_attendance", sort_order="asc"` |
+| "best attendance" / "highest attendance" | `sort_by="student_attendance", sort_order="desc"` |
+| "highest impact" / "most growth" | `sort_by="impact_score", sort_order="desc"` |
+| "lowest impact" / "least growth" | `sort_by="impact_score", sort_order="asc"` |
+| "largest schools" | `sort_by="enrollment", sort_order="desc"` |
+| "smallest schools" | `sort_by="enrollment", sort_order="asc"` |
+| "highest poverty" / "most need" | `sort_by="economic_need_index", sort_order="desc"` |
+
+Example: "What are the largest high schools in Manhattan?" generates:
+```json
+{ "borough": "Manhattan", "report_type": "HS", "sort_by": "enrollment", "sort_order": "desc" }
+```
+
 **Typo Tolerance (Levenshtein):**
 - When LIKE search returns no results, fuzzy matching kicks in
 - Edit distance ≤ 3 for typos like "Stuyvesent" → "Stuyvesant"

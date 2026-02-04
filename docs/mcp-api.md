@@ -197,6 +197,14 @@ Find EMS schools with lowest student attendance (sorted ascending):
 - `sort_by`: `impact_score`, `performance_score`, `economic_need_index`, `enrollment`, `student_attendance`, `teacher_attendance`, `name`
 - `sort_order`: `asc` (lowest first) or `desc` (highest first, default)
 
+**Natural language sorting (in chat):** The AI maps common phrases to sort parameters:
+| User Says | Maps To |
+|-----------|---------|
+| "worst/lowest attendance" | `sort_by="student_attendance", sort_order="asc"` |
+| "largest schools" | `sort_by="enrollment", sort_order="desc"` |
+| "highest impact" | `sort_by="impact_score", sort_order="desc"` |
+| "highest poverty" | `sort_by="economic_need_index", sort_order="desc"` |
+
 #### get_school_profile
 
 Get detailed info for a specific school:

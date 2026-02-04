@@ -8,7 +8,7 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Three-layer AI guardrails**: pre-filter, system prompt, and tool-level context to ensure responsible framing
 - **LLM-as-judge evaluation**: every response is scored on factual accuracy, context inclusion, limitation acknowledgment, responsible framing, and query relevance -- scores are shown in the chat UI
 - **Evaluation logging**: low-scoring responses (< 75) are auto-logged; users can flag any response with feedback via modal
-- **MCP tools** for school search (with sorting), profiles, correlations, charts, and curated lists
+- **MCP tools** for school search (with natural language sorting), profiles, correlations, charts, and curated lists
 - **Interactive charts** via Recharts for data visualization
 - **School profiles** with year-over-year comparison
 
