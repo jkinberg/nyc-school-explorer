@@ -140,7 +140,9 @@ Also strengthened rule #3 in Strict Data Integrity Rules:
 
 **Problem discovered**: Users couldn't query for schools sorted by specific metrics like "lowest attendance rates" - results were always sorted by impact_score descending.
 
-**Files**: `src/lib/db/queries.ts`, `src/lib/mcp/tools/search-schools.ts`
+**Files**: `src/lib/db/queries.ts`, `src/lib/mcp/tools/search-schools.ts`, `src/lib/ai/system-prompt.ts`
+
+### 5a. Database & Tool Support
 
 Added sorting parameters to `search_schools` tool:
 
@@ -149,7 +151,23 @@ Added sorting parameters to `search_schools` tool:
 - NULLs are always sorted last regardless of direction
 - Uses whitelist validation to prevent SQL injection
 
-**Example query**: "Show me the 10 EMS schools with lowest student attendance"
+### 5b. Natural Language Mapping
+
+**Problem**: Initial implementation required explicit parameters. Users asking "worst attendance" wouldn't trigger sorting.
+
+**Solution**: Added natural language mappings to the system prompt:
+
+```
+- "lowest attendance" / "worst attendance" → sort_by="student_attendance", sort_order="asc"
+- "highest attendance" / "best attendance" → sort_by="student_attendance", sort_order="desc"
+- "lowest impact" / "least growth" → sort_by="impact_score", sort_order="asc"
+- "highest impact" / "most growth" → sort_by="impact_score", sort_order="desc"
+- "smallest schools" → sort_by="enrollment", sort_order="asc"
+- "largest schools" → sort_by="enrollment", sort_order="desc"
+- "highest poverty" / "most need" → sort_by="economic_need_index", sort_order="desc"
+```
+
+**Example result**: "Which EMS schools have the worst attendance?"
 
 | School | Attendance |
 |--------|------------|
@@ -213,6 +231,16 @@ Added sorting parameters to `search_schools` tool:
 **Result**: PASSED
 - Claude said "Yes, I do have student attendance data for EMS (Elementary/Middle Schools) schools! Student attendance data is available for approximately 96% of EMS schools in the dataset."
 
+### Test 4: Natural Language Sorting
+**Query**: "Which EMS schools have the worst attendance?"
+
+**Expected**:
+- Claude uses `sort_by="student_attendance"` and `sort_order="asc"` without explicit instruction
+
+**Result**: PASSED
+- Tool call included: `{"report_type":"EMS","sort_by":"student_attendance","sort_order":"asc","limit":20}`
+- Results correctly showed schools with lowest attendance first
+
 ---
 
 ## Monitoring
@@ -236,6 +264,8 @@ Look for:
 31b1e01 Fix data hallucination and chart empty state issues
 b31743b Add data availability table to prevent false claims about missing data
 4ce7fc2 Add sorting capability to search_schools tool
+53ff7a3 Add sorting guidance to system prompt and tool definition
+2594f3d Add natural language sorting mappings to system prompt
 ```
 
 Deployed to production via GitHub Actions CI/CD on 2026-02-03.
