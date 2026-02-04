@@ -59,6 +59,20 @@ const CHARTER_LABELS: Record<string, string> = {
 export function ChartRenderer({ chart }: ChartRendererProps) {
   const { type, title, xAxis, yAxis, data, colorBy } = chart;
 
+  // Handle empty data
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 my-4 border border-yellow-200 dark:border-yellow-800">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          {title}
+        </h3>
+        <p className="text-yellow-800 dark:text-yellow-200">
+          No data matched the specified criteria. Try broadening your filters.
+        </p>
+      </div>
+    );
+  }
+
   // Get color for a data point
   const getColor = (item: Record<string, unknown>): string => {
     if (!colorBy) return '#3B82F6';

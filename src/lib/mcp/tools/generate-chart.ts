@@ -287,6 +287,42 @@ export function generateChartTool(params: GenerateChartParams): GenerateChartRes
       return point;
     });
 
+  // Handle empty data case - return explicit error context
+  if (chartData.length === 0) {
+    const defaultTitle = chart_type === 'scatter'
+      ? `${METRIC_LABELS[x_metric] || x_metric} vs ${METRIC_LABELS[y_metric || ''] || y_metric}`
+      : `Distribution of ${METRIC_LABELS[x_metric] || x_metric}`;
+
+    const errorContext = {
+      sample_size: 0,
+      data_year: year,
+      error: "NO_DATA_MATCHED",
+      error_message: "No schools matched the specified filter criteria. The chart cannot be rendered. Suggest broadening filters or checking criteria.",
+      citywide_medians: {
+        impact: citywideStats?.median_impact_score || 0.50,
+        performance: citywideStats?.median_performance_score || 0.50,
+        eni: citywideStats?.median_economic_need || 0.72
+      },
+      limitations: [
+        "No schools matched the specified filter criteria",
+        "Try broadening filters or checking criteria values"
+      ]
+    };
+
+    return {
+      chart: {
+        type: chart_type,
+        title: title || defaultTitle,
+        xAxis: { label: METRIC_LABELS[x_metric] || x_metric, dataKey: x_metric },
+        yAxis: { label: y_metric ? (METRIC_LABELS[y_metric] || y_metric) : 'Count', dataKey: y_metric || 'count' },
+        data: [],
+        colorBy: color_by,
+        context: errorContext
+      },
+      _context: errorContext
+    };
+  }
+
   // Handle histogram specially - need to bin the data
   if (chart_type === 'histogram') {
     const { bins, min, max } = binDataForHistogram(chartData, x_metric, color_by);
