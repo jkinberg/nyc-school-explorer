@@ -21,6 +21,8 @@ export interface SearchSchoolsParams {
   max_pct_funded?: number;
   council_district?: number;
   nta?: string;
+  sort_by?: 'impact_score' | 'performance_score' | 'economic_need_index' | 'enrollment' | 'student_attendance' | 'teacher_attendance' | 'name';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface SearchSchoolsResult {
@@ -61,6 +63,8 @@ export function searchSchoolsTool(params: SearchSchoolsParams): SearchSchoolsRes
     limit,
     nta: params.nta,
     councilDistrict: params.council_district,
+    sortBy: params.sort_by,
+    sortOrder: params.sort_order,
   };
 
   // Map old DB category values to new names in response
@@ -239,6 +243,18 @@ This tool always returns both Impact Score AND Performance Score together with E
       nta: {
         type: 'string',
         description: 'Neighborhood Tabulation Area name (e.g., "Lower East Side")'
+      },
+      sort_by: {
+        type: 'string',
+        enum: ['impact_score', 'performance_score', 'economic_need_index', 'enrollment', 'student_attendance', 'teacher_attendance', 'name'],
+        default: 'impact_score',
+        description: 'Field to sort results by'
+      },
+      sort_order: {
+        type: 'string',
+        enum: ['asc', 'desc'],
+        default: 'desc',
+        description: 'Sort order: "asc" for ascending (lowest first), "desc" for descending (highest first)'
       }
     }
   }

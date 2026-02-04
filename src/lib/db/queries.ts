@@ -72,7 +72,20 @@ export interface SearchParams {
   offset?: number;
   nta?: string;
   councilDistrict?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
+
+// Whitelist of valid sort columns to prevent SQL injection
+const VALID_SORT_COLUMNS: Record<string, string> = {
+  'impact_score': 'm.impact_score',
+  'performance_score': 'm.performance_score',
+  'economic_need_index': 'm.economic_need_index',
+  'enrollment': 'm.enrollment',
+  'student_attendance': 'm.student_attendance',
+  'teacher_attendance': 'm.teacher_attendance',
+  'name': 's.name',
+};
 
 export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
   const db = getDatabase();
@@ -188,6 +201,16 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
     ? 'LEFT JOIN school_locations l ON s.dbn = l.dbn'
     : '';
 
+  // Build ORDER BY clause with validation
+  const sortColumn = params.sortBy && VALID_SORT_COLUMNS[params.sortBy]
+    ? VALID_SORT_COLUMNS[params.sortBy]
+    : 'm.impact_score';
+  const sortDirection = params.sortOrder === 'asc' ? 'ASC' : 'DESC';
+  // Put NULLs last regardless of sort direction
+  const nullsLast = params.sortOrder === 'asc'
+    ? `${sortColumn} IS NULL, ${sortColumn} ASC`
+    : `${sortColumn} IS NULL, ${sortColumn} DESC`;
+
   const sql = `
     SELECT
       s.dbn, s.name, s.borough, s.district, s.school_type, s.report_type, s.is_charter,
@@ -201,7 +224,7 @@ export function searchSchools(params: SearchParams): SchoolWithMetrics[] {
     JOIN school_metrics m ON s.dbn = m.dbn
     ${locationJoin}
     WHERE ${conditions.join(' AND ')}
-    ORDER BY m.impact_score DESC
+    ORDER BY ${nullsLast}
     LIMIT ? OFFSET ?
   `;
 
