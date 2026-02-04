@@ -1,9 +1,11 @@
 #!/usr/bin/env npx tsx
 
 /**
- * Analyze evaluation logs from logs/evaluations.jsonl
+ * Analyze evaluation logs from JSONL or CSV
  *
- * Usage: npx tsx scripts/analyze-logs.ts
+ * Usage:
+ *   npx tsx scripts/analyze-logs.ts                    # Read from logs/evaluations.jsonl
+ *   npx tsx scripts/analyze-logs.ts --csv export.csv   # Read from Google Sheets CSV export
  */
 
 import { promises as fs } from 'fs';
@@ -32,37 +34,144 @@ interface EvaluationLogEntry {
   user_feedback?: string;
 }
 
-async function main() {
-  const logsPath = path.join(process.cwd(), 'logs', 'evaluations.jsonl');
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
 
-  // Check if file exists
-  try {
-    await fs.access(logsPath);
-  } catch {
-    console.log('No evaluation logs found at logs/evaluations.jsonl');
-    console.log('Logs will be created when responses are auto-logged (score < 75) or user-flagged.');
-    process.exit(0);
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Escaped quote
+        current += '"';
+        i++;
+      } else {
+        // Toggle quote mode
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+
+  return result;
+}
+
+function parseCSV(content: string): Record<string, string>[] {
+  const lines = content.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+
+  const headers = parseCSVLine(lines[0]);
+  const rows: Record<string, string>[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    const row: Record<string, string> = {};
+    for (let j = 0; j < headers.length; j++) {
+      row[headers[j]] = values[j] || '';
+    }
+    rows.push(row);
   }
 
-  // Read and parse JSONL
-  const content = await fs.readFile(logsPath, 'utf-8');
+  return rows;
+}
+
+function csvRowToEntry(row: Record<string, string>): EvaluationLogEntry {
+  // Convert flat CSV row back to nested structure
+  const toolNames = row.tool_names ? row.tool_names.split(', ').filter(Boolean) : [];
+
+  return {
+    id: row.id,
+    timestamp: row.timestamp,
+    log_type: row.log_type as 'auto' | 'user_flagged',
+    user_query: row.user_query,
+    assistant_response: row.assistant_response_preview || '',
+    tool_calls: toolNames.map(name => ({ name, parameters: {} })),
+    evaluation: {
+      scores: {
+        factual_accuracy: parseInt(row.score_factual) || 0,
+        context_inclusion: parseInt(row.score_context) || 0,
+        limitation_acknowledgment: parseInt(row.score_limitations) || 0,
+        responsible_framing: parseInt(row.score_framing) || 0,
+        query_relevance: parseInt(row.score_relevance) || 0,
+      },
+      weighted_score: parseInt(row.weighted_score) || 0,
+      confidence_level: row.confidence_level || '',
+      flags: row.flags ? row.flags.split(', ').filter(Boolean) : [],
+      summary: row.summary || '',
+    },
+    user_feedback: row.user_feedback || undefined,
+  };
+}
+
+async function loadFromJSONL(filePath: string): Promise<EvaluationLogEntry[]> {
+  const content = await fs.readFile(filePath, 'utf-8');
   const lines = content.trim().split('\n').filter(line => line.trim());
-
-  if (lines.length === 0) {
-    console.log('No entries in logs/evaluations.jsonl');
-    process.exit(0);
-  }
 
   const entries: EvaluationLogEntry[] = [];
   for (const line of lines) {
     try {
       entries.push(JSON.parse(line));
-    } catch (e) {
+    } catch {
       console.warn('Skipping malformed line:', line.substring(0, 50));
     }
   }
+  return entries;
+}
 
-  console.log('\n=== Evaluation Log Analysis ===\n');
+async function loadFromCSV(filePath: string): Promise<EvaluationLogEntry[]> {
+  const content = await fs.readFile(filePath, 'utf-8');
+  const rows = parseCSV(content);
+  return rows.map(csvRowToEntry);
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  let entries: EvaluationLogEntry[] = [];
+  let sourceLabel = '';
+
+  // Check for --csv flag
+  const csvIndex = args.indexOf('--csv');
+  if (csvIndex !== -1 && args[csvIndex + 1]) {
+    const csvPath = args[csvIndex + 1];
+    try {
+      await fs.access(csvPath);
+      entries = await loadFromCSV(csvPath);
+      sourceLabel = `CSV: ${csvPath}`;
+    } catch {
+      console.error(`Cannot read CSV file: ${csvPath}`);
+      process.exit(1);
+    }
+  } else {
+    // Default: read from JSONL
+    const logsPath = path.join(process.cwd(), 'logs', 'evaluations.jsonl');
+    try {
+      await fs.access(logsPath);
+      entries = await loadFromJSONL(logsPath);
+      sourceLabel = 'JSONL: logs/evaluations.jsonl';
+    } catch {
+      console.log('No evaluation logs found at logs/evaluations.jsonl');
+      console.log('');
+      console.log('Usage:');
+      console.log('  npx tsx scripts/analyze-logs.ts                    # Read local JSONL');
+      console.log('  npx tsx scripts/analyze-logs.ts --csv export.csv   # Read Google Sheets CSV');
+      process.exit(0);
+    }
+  }
+
+  if (entries.length === 0) {
+    console.log('No entries found in log file');
+    process.exit(0);
+  }
+
+  console.log('\n=== Evaluation Log Analysis ===');
+  console.log(`Source: ${sourceLabel}\n`);
   console.log(`Total entries: ${entries.length}`);
 
   // Count by type
