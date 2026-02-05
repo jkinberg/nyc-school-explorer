@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { EvaluationResult } from '@/types/chat';
+import { CopyButton } from './CopyButton';
 
 type ConfidenceLevel = 'high' | 'verified' | 'review_suggested' | 'low';
 
@@ -100,6 +101,32 @@ function ScoreBar({ score, level }: { score: number; level: ConfidenceLevel }) {
   );
 }
 
+function formatEvaluationAsText(evaluation: EvaluationResult, level: ConfidenceLevel): string {
+  const config = CONFIDENCE_CONFIG[level];
+  const lines: string[] = [];
+
+  lines.push(`${config.label} (${evaluation.weighted_score}/100)`);
+  lines.push('');
+  lines.push(evaluation.summary);
+  lines.push('');
+  lines.push('Scores:');
+
+  for (const [key, { label, weight }] of Object.entries(DIMENSION_LABELS)) {
+    const score = evaluation.scores[key as keyof typeof evaluation.scores];
+    lines.push(`  ${label} (${weight}%): ${score}/5`);
+  }
+
+  if (evaluation.flags && evaluation.flags.length > 0) {
+    lines.push('');
+    lines.push('Flags:');
+    for (const flag of evaluation.flags) {
+      lines.push(`  - ${flag}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 export function ConfidenceBadge({ evaluation }: ConfidenceBadgeProps) {
   const [expanded, setExpanded] = useState(false);
   const level = getConfidenceLevel(evaluation.weighted_score);
@@ -137,10 +164,14 @@ export function ConfidenceBadge({ evaluation }: ConfidenceBadgeProps) {
 
       {expanded && (
         <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-sm">
-          {/* Summary */}
-          <p className="text-gray-700 dark:text-gray-300 mb-3">
-            {evaluation.summary}
-          </p>
+          {/* Header with copy button */}
+          <div className="flex items-start justify-between gap-2 mb-3">
+            {/* Summary */}
+            <p className="text-gray-700 dark:text-gray-300">
+              {evaluation.summary}
+            </p>
+            <CopyButton text={formatEvaluationAsText(evaluation, level)} />
+          </div>
 
           {/* Dimension scores */}
           <div className="space-y-2 mb-3">
