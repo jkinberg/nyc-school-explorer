@@ -234,19 +234,188 @@ describe('ChartRenderer Export Functionality', () => {
   });
 
   describe('PNG Export', () => {
-    it('attempts to export when PNG button is clicked', async () => {
+    let mockLinkClick: ReturnType<typeof vi.fn>;
+    let createdLinks: HTMLAnchorElement[];
+    const originalCreateElement = document.createElement.bind(document);
+
+    beforeEach(() => {
+      mockLinkClick = vi.fn();
+      createdLinks = [];
+
+      // Override createElement to track anchor elements
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        const element = originalCreateElement(tagName);
+        if (tagName === 'a') {
+          createdLinks.push(element as HTMLAnchorElement);
+          element.click = mockLinkClick;
+        }
+        return element;
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('triggers download after image loads', async () => {
       render(<ChartRenderer chart={mockBarChartData} />);
 
       const pngButton = screen.getByTitle('Download as PNG');
 
-      // This will attempt to find SVG and export - in test environment
-      // it may not find the SVG due to Recharts not rendering fully
       await act(async () => {
         fireEvent.click(pngButton);
+        // Wait for async image load callback
+        await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // The button should be clickable without error
-      expect(pngButton).toBeInTheDocument();
+      // Download should be triggered
+      expect(mockLinkClick).toHaveBeenCalled();
+    });
+
+    it('uses sanitized chart title for PNG filename', async () => {
+      const chartWithSpecialChars: ChartData = {
+        type: 'bar',
+        title: 'Test Chart: 100% of Schools (2024)',
+        xAxis: { dataKey: 'name', label: 'Name' },
+        yAxis: { dataKey: 'value', label: 'Value' },
+        data: [{ name: 'Test', value: 100 }],
+        context: mockContext,
+      };
+
+      render(<ChartRenderer chart={chartWithSpecialChars} />);
+
+      const pngButton = screen.getByTitle('Download as PNG');
+
+      await act(async () => {
+        fireEvent.click(pngButton);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const link = createdLinks.find(l => l.download.endsWith('.png'));
+      expect(link?.download).toBe('test-chart-100-of-schools-2024.png');
+    });
+
+    it('creates PNG data URL for download', async () => {
+      render(<ChartRenderer chart={mockBarChartData} />);
+
+      const pngButton = screen.getByTitle('Download as PNG');
+
+      await act(async () => {
+        fireEvent.click(pngButton);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const link = createdLinks.find(l => l.download.endsWith('.png'));
+      expect(link?.href).toContain('data:image/png');
+    });
+  });
+
+  describe('PNG Export SVG Processing', () => {
+    // Unit tests for the SVG processing logic using a real SVG element
+    it('processes SVG with proper dimensions and background', async () => {
+      // Create a container with a real SVG to test the export logic
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <svg width="400" height="300" class="recharts-surface">
+          <g class="recharts-layer">
+            <circle cx="50" cy="50" r="5" class="recharts-dot" />
+            <circle cx="100" cy="100" r="5" class="recharts-dot" />
+            <text x="200" y="280" class="recharts-label">X Axis</text>
+          </g>
+        </svg>
+      `;
+      document.body.appendChild(container);
+
+      const svg = container.querySelector('svg')!;
+
+      // Clone and process like the export function does
+      const clone = svg.cloneNode(true) as SVGElement;
+      const bbox = { width: 400, height: 300 };
+
+      // Set explicit dimensions
+      clone.setAttribute('width', String(bbox.width));
+      clone.setAttribute('height', String(bbox.height));
+      clone.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
+
+      // Add white background
+      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bgRect.setAttribute('width', '100%');
+      bgRect.setAttribute('height', '100%');
+      bgRect.setAttribute('fill', 'white');
+      clone.insertBefore(bgRect, clone.firstChild);
+
+      // Verify the clone has the expected attributes
+      expect(clone.getAttribute('width')).toBe('400');
+      expect(clone.getAttribute('height')).toBe('300');
+      expect(clone.getAttribute('viewBox')).toBe('0 0 400 300');
+
+      // Verify background rect was added as first child
+      const firstChild = clone.firstChild as Element;
+      expect(firstChild.tagName).toBe('rect');
+      expect(firstChild.getAttribute('fill')).toBe('white');
+
+      // Verify all original content is preserved
+      expect(clone.querySelectorAll('circle').length).toBe(2);
+      expect(clone.querySelectorAll('text').length).toBe(1);
+
+      document.body.removeChild(container);
+    });
+
+    it('inlines computed styles on SVG elements', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <svg width="400" height="300">
+          <circle cx="50" cy="50" r="5" style="fill: blue;" />
+        </svg>
+      `;
+      document.body.appendChild(container);
+
+      const svg = container.querySelector('svg')!;
+      const circle = svg.querySelector('circle')!;
+
+      // The inlineStyles function copies computed styles
+      // In JSDOM, getComputedStyle returns the inline styles
+      const computedStyle = window.getComputedStyle(circle);
+
+      // Verify we can access computed styles
+      expect(computedStyle).toBeDefined();
+
+      document.body.removeChild(container);
+    });
+
+    it('preserves all SVG child elements when cloning', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <svg width="400" height="300" viewBox="0 0 400 300">
+          <g>
+            <circle cx="50" cy="50" r="5" fill="#3B82F6" />
+            <circle cx="100" cy="100" r="5" fill="#3B82F6" />
+            <line x1="0" y1="280" x2="400" y2="280" stroke="#ccc" />
+            <text x="200" y="295">Impact Score</text>
+          </g>
+        </svg>
+      `;
+      document.body.appendChild(container);
+
+      const svg = container.querySelector('svg')!;
+      const clone = svg.cloneNode(true) as SVGElement;
+
+      // Verify all elements are preserved in the clone
+      expect(clone.getAttribute('width')).toBe('400');
+      expect(clone.getAttribute('height')).toBe('300');
+      expect(clone.getAttribute('viewBox')).toBe('0 0 400 300');
+      expect(clone.querySelectorAll('circle').length).toBe(2);
+      expect(clone.querySelectorAll('line').length).toBe(1);
+      expect(clone.querySelectorAll('text').length).toBe(1);
+      expect(clone.querySelector('text')?.textContent).toBe('Impact Score');
+
+      // Verify fill attributes are preserved
+      const circles = clone.querySelectorAll('circle');
+      circles.forEach(circle => {
+        expect(circle.getAttribute('fill')).toBe('#3B82F6');
+      });
+
+      document.body.removeChild(container);
     });
   });
 

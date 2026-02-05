@@ -73,11 +73,57 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
     const svgElement = chartContainerRef.current?.querySelector('svg');
     if (!svgElement) return;
 
-    // Clone and prepare SVG
+    // Clone the SVG
     const clone = svgElement.cloneNode(true) as SVGElement;
     const bbox = svgElement.getBoundingClientRect();
+
+    // Set explicit dimensions
     clone.setAttribute('width', String(bbox.width));
     clone.setAttribute('height', String(bbox.height));
+    clone.setAttribute('viewBox', `0 0 ${bbox.width} ${bbox.height}`);
+
+    // Inline computed styles for all elements (CSS classes don't transfer)
+    const inlineStyles = (original: Element, cloned: Element) => {
+      const computedStyle = window.getComputedStyle(original);
+
+      // Key SVG styling properties to inline
+      const styleProps = [
+        'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity',
+        'font-family', 'font-size', 'font-weight', 'text-anchor',
+        'dominant-baseline', 'fill-opacity', 'stroke-opacity'
+      ];
+
+      const styles: string[] = [];
+      for (const prop of styleProps) {
+        const value = computedStyle.getPropertyValue(prop);
+        if (value && value !== 'none' && value !== '') {
+          styles.push(`${prop}:${value}`);
+        }
+      }
+
+      if (styles.length > 0) {
+        const existingStyle = cloned.getAttribute('style') || '';
+        cloned.setAttribute('style', existingStyle + styles.join(';'));
+      }
+
+      // Recursively process children
+      const originalChildren = original.children;
+      const clonedChildren = cloned.children;
+      for (let i = 0; i < originalChildren.length; i++) {
+        if (clonedChildren[i]) {
+          inlineStyles(originalChildren[i], clonedChildren[i]);
+        }
+      }
+    };
+
+    inlineStyles(svgElement, clone);
+
+    // Add white background rectangle
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('width', '100%');
+    bgRect.setAttribute('height', '100%');
+    bgRect.setAttribute('fill', 'white');
+    clone.insertBefore(bgRect, clone.firstChild);
 
     // Convert to canvas
     const canvas = document.createElement('canvas');
@@ -88,17 +134,19 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
     const img = new Image();
 
     img.onload = () => {
-      canvas.width = img.width * 2; // 2x for retina
-      canvas.height = img.height * 2;
+      canvas.width = bbox.width * 2; // 2x for retina
+      canvas.height = bbox.height * 2;
       ctx.scale(2, 2);
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
 
       const link = document.createElement('a');
       link.download = `${sanitizeFilename(title)}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+    };
+
+    img.onerror = () => {
+      console.error('Failed to load SVG for PNG export');
     };
 
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
