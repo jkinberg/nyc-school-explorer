@@ -92,6 +92,11 @@ const TEST_QUERIES = [
     query: "Is there a correlation between family engagement and impact scores?",
     description: "Tests survey metrics availability and correlation tool (regression test for survey fields)",
     expectedFacts: ["survey_family_involvement", "correlation", "impact_score"]
+  },
+  {
+    query: "Does principal tenure correlate with student growth?",
+    description: "Tests staff metrics and natural language mapping (principal tenure → principal_years)",
+    expectedFacts: ["principal_years", "correlation", "impact_score"]
   }
 ];
 
