@@ -368,26 +368,85 @@ ZAPIER_WEBHOOK_URL=...          # Optional: Zapier webhook for evaluation loggin
 
 ## Testing
 
-The project uses Vitest with React Testing Library for component testing.
+The project uses Vitest with React Testing Library. Tests focus on business logic over UI, with fast feedback (<2 seconds).
+
+### Running Tests
 
 ```bash
 # Run tests in watch mode
 npm run test
 
-# Run tests once
+# Run tests once (CI mode)
 npm run test:run
+
+# Run with coverage report
+npm run test:coverage
 ```
 
-**Test files location**: `src/components/chat/__tests__/`
+### Test Organization
 
-**Current test coverage**:
-- `CopyButton.test.tsx`: Copy-to-clipboard functionality, visual feedback
-- `ChartRenderer.test.tsx`: CSV export with escaping, PNG export SVG processing
-- `ConfidenceBadge.test.tsx`: Evaluation display, copy functionality
+```
+src/
+├── lib/
+│   ├── ai/__tests__/
+│   │   ├── prefilter.test.ts       # AI guardrails (50 tests)
+│   │   └── evaluation.test.ts      # Scoring functions (27 tests)
+│   ├── db/__tests__/
+│   │   ├── queries.test.ts         # Query logic (35 tests)
+│   │   └── fixtures.ts             # Test data fixtures
+│   ├── mcp/tools/__tests__/
+│   │   ├── search-schools.test.ts  # Search tool (34 tests)
+│   │   └── get-school-profile.test.ts # Profile tool (22 tests)
+│   └── utils/__tests__/
+│       ├── formatting.test.ts      # Formatting utilities (47 tests)
+│       └── fuzzy.test.ts           # Fuzzy matching (26 tests)
+└── components/chat/__tests__/
+    ├── ChartRenderer.test.tsx      # Chart export (20 tests)
+    ├── ConfidenceBadge.test.tsx    # Evaluation display (9 tests)
+    └── CopyButton.test.tsx         # Copy functionality (5 tests)
+```
 
-**Test setup**:
+### Test Coverage by Module
+
+| Module | Tests | Focus |
+|--------|-------|-------|
+| AI Prefilter | 50 | Block patterns, flag patterns, false positive prevention |
+| AI Evaluation | 27 | Weighted scoring, confidence badges, flagging logic |
+| MCP Tools | 56 | Filtering, sorting, context generation, category mapping |
+| Database Queries | 35 | Abbreviation normalization, correlation math, category logic |
+| Utilities | 73 | Formatting edge cases, Levenshtein distance, fuzzy matching |
+| UI Components | 34 | Chart export, copy functionality, evaluation display |
+| **Total** | **275** | **~1.4 seconds runtime** |
+
+### Testing Philosophy
+
+1. **Test business logic over UI**: MCP tools and AI guardrails contain core value
+2. **Fast feedback loop**: All tests run in <2 seconds
+3. **Test at the right level**: Unit tests for logic, mock external services
+4. **Incremental coverage**: Add tests with each feature
+
+### What's NOT Tested
+
+- Database integration (would require in-memory SQLite)
+- API routes (would require mocking Claude/Gemini APIs)
+- Simple pass-through components
+- Third-party library behavior (Recharts, react-markdown)
+
+### Adding Tests for New Features
+
+| Change Type | Test Level | Location |
+|-------------|------------|----------|
+| New MCP tool | Unit test tool logic | `src/lib/mcp/tools/__tests__/` |
+| New utility function | Unit test with edge cases | `src/lib/utils/__tests__/` |
+| New prefilter pattern | Add pattern test | `src/lib/ai/__tests__/prefilter.test.ts` |
+| UI component with logic | React Testing Library | `src/components/[module]/__tests__/` |
+| Bug fix | Add regression test | Adjacent to source file |
+
+### Test Setup Files
+
 - `vitest.config.ts`: Vitest configuration with React plugin and path aliases
 - `vitest.setup.ts`: Global mocks for clipboard, Blob, XMLSerializer, Image, canvas
+- `src/lib/db/__tests__/fixtures.ts`: Representative test data for all school types and categories
 
 ## Common Tasks
 
