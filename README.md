@@ -8,7 +8,7 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Three-layer AI guardrails**: pre-filter, system prompt, and tool-level context to ensure responsible framing
 - **LLM-as-judge evaluation**: every response is scored on factual accuracy, context inclusion, limitation acknowledgment, responsible framing, and query relevance -- scores are shown in the chat UI
 - **Evaluation logging**: low-scoring responses (< 75) are auto-logged; users can flag any response with feedback via modal
-- **MCP tools** for school search (with natural language sorting), profiles, correlations, charts, and curated lists
+- **MCP tools** for school search (with natural language sorting), profiles, correlations (19 metrics including surveys and staff data), charts, and curated lists
 - **Interactive charts** via Recharts for data visualization with PNG/CSV export
 - **School profiles** with year-over-year comparison
 - **Copy and export**: copy response text, export charts as PNG or CSV, copy evaluation scores
@@ -49,15 +49,25 @@ npm run test:run       # Run once (CI)
 npm run test:coverage  # With coverage report
 ```
 
-**275 tests** across 10 test files, running in ~1.4 seconds:
+**278 tests** across 10 test files, running in ~1.4 seconds:
 
 | Module | Tests | Focus |
 |--------|-------|-------|
 | AI Guardrails | 77 | Prefilter patterns, evaluation scoring |
-| MCP Tools | 56 | Search filtering, profile lookup, context |
+| MCP Tools | 59 | Search filtering, profile lookup, context, sorting |
 | Utilities | 73 | Formatting, fuzzy matching |
 | Database Logic | 35 | Abbreviations, correlations, categories |
 | UI Components | 34 | Chart export, copy functionality |
+
+### Testing the Evaluation Rubric
+
+To test the LLM-as-judge evaluation against production:
+
+```bash
+npx tsx scripts/test-evaluation-rubric.ts https://your-production-url.run.app
+```
+
+This runs 12 test queries and reports on factual accuracy scores and evaluation flags. Use this after making changes to tool results, correlation metrics, or system prompt guidance.
 
 See [CLAUDE.md](CLAUDE.md#testing) for detailed testing documentation.
 

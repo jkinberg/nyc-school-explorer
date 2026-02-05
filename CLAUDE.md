@@ -143,10 +143,46 @@ When querying categories:
 | `search_schools` | Filter schools by borough, category, metrics. Supports `query` param for name/DBN search, `sort_by` and `sort_order` for custom sorting |
 | `get_school_profile` | Detailed school view with YoY comparison. Returns suggestions if DBN not found |
 | `find_similar_schools` | Find peer schools by ENI (±5%) and enrollment (±20%) |
-| `analyze_correlations` | Calculate correlation between metrics |
+| `analyze_correlations` | Calculate correlation between metrics. Supports 19 metrics including surveys and staff data |
 | `generate_chart` | Return data for Recharts visualizations |
 | `explain_metrics` | Educational content about methodology |
 | `get_curated_lists` | Pre-computed High Growth, Strong Growth + Outcomes, Persistent High Growth lists |
+
+### Correlation Metrics
+
+The `analyze_correlations` tool supports these metrics:
+
+| Category | Metrics |
+|----------|---------|
+| Core | `impact_score`, `performance_score`, `economic_need_index`, `enrollment` |
+| Attendance | `student_attendance`, `teacher_attendance` |
+| Staff | `principal_years`, `pct_teachers_3plus_years` |
+| Budget | `total_budget`, `pct_funded`, `pta_income` |
+| Suspensions | `total_suspensions` |
+| Surveys | `survey_family_involvement`, `survey_family_trust`, `survey_safety`, `survey_communication`, `survey_instruction`, `survey_leadership`, `survey_support` |
+
+### Natural Language Metric Mapping
+
+The system prompt includes guidance for mapping natural language to metric names:
+
+| User says | Maps to |
+|-----------|---------|
+| "family engagement", "parent involvement" | `survey_family_involvement` |
+| "principal tenure", "principal experience" | `principal_years` |
+| "teacher experience", "experienced teachers" | `pct_teachers_3plus_years` |
+| "student growth", "learning gains" | `impact_score` |
+| "test scores", "achievement" | `performance_score` |
+| "poverty", "economic need" | `economic_need_index` |
+
+### Tool Selection Guidelines
+
+The system prompt guides Claude on when to use each tool:
+
+- **Correlation questions** → `analyze_correlations` (returns r-value)
+- **Visualization requests** → `generate_chart` (returns chart data)
+- **School lookups** → `search_schools` or `get_school_profile`
+
+This prevents Claude from using `generate_chart` to answer correlation questions (which wouldn't provide the actual r-value).
 
 ### Fuzzy School Search
 
@@ -484,6 +520,33 @@ src/
 
 - `vitest.config.ts`: Vitest configuration with React plugin and path aliases
 - `vitest.setup.ts`: Global mocks for clipboard, Blob, XMLSerializer, Image, canvas
+
+### Evaluation Rubric Testing
+
+The `scripts/test-evaluation-rubric.ts` script tests the LLM-as-judge evaluation system against production:
+
+```bash
+npx tsx scripts/test-evaluation-rubric.ts https://your-production-url.run.app
+```
+
+This script:
+1. Sends 12 test queries covering core functionality and regression tests
+2. Parses SSE responses and evaluation scores
+3. Reports factual accuracy scores and flags
+4. Identifies potential false positives in the evaluation rubric
+
+**Test queries include:**
+- Core data facts (correlations, counts, thresholds)
+- School profiles and searches
+- Attendance sorting (regression test for data availability)
+- Survey metrics correlation (regression test for family engagement)
+- Staff metrics correlation (regression test for principal tenure)
+
+Run this after changes to:
+- `ESSENTIAL_SCHOOL_FIELDS` (tool result summarization)
+- `analyze_correlations` metrics
+- System prompt guidance
+- Evaluation rubric in `src/lib/ai/evaluation.ts`
 - `src/lib/db/__tests__/fixtures.ts`: Representative test data for all school types and categories
 
 ## Common Tasks
