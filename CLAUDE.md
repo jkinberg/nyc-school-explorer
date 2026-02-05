@@ -50,8 +50,9 @@ src/
 │   │   ├── MarkdownRenderer.tsx  # React-markdown with school name linking
 │   │   ├── ToolCallDisplay.tsx   # Collapsible MCP tool execution cards
 │   │   ├── ScrollToBottomButton.tsx  # Floating scroll button
-│   │   ├── ChartRenderer.tsx     # Recharts visualization
-│   │   ├── ConfidenceBadge.tsx   # LLM-as-judge score display + auto-logged indicator
+│   │   ├── ChartRenderer.tsx     # Recharts visualization with PNG/CSV export
+│   │   ├── ConfidenceBadge.tsx   # LLM-as-judge score display + copy button
+│   │   ├── CopyButton.tsx        # Reusable copy-to-clipboard button
 │   │   ├── FlagButton.tsx        # User feedback modal for flagging responses
 │   │   └── SuggestedQueries.tsx  # Follow-up query suggestions
 │   ├── schools/                  # School display components
@@ -297,6 +298,13 @@ The chat UI (`src/components/chat/`) includes several user experience enhancemen
 - Floating "New messages" button appears when not at bottom
 - Button positioned above input area for easy access
 
+**Copy and Export** (`CopyButton.tsx`, `ChartRenderer.tsx`, `ConfidenceBadge.tsx`):
+- **Copy response text**: Copy button on assistant messages copies plain text to clipboard
+- **Export chart as PNG**: Downloads chart as high-resolution PNG image (2x for retina) with all styling preserved via inline CSS
+- **Export chart as CSV**: Downloads chart data with proper escaping for commas and quotes
+- **Copy evaluation**: Copy button in evaluation dropdown formats scores, summary, and flags as text
+- Visual feedback: Button shows "Copied" with checkmark for 2 seconds after copying
+
 ### Evaluation SSE Flow
 
 The chat API keeps the SSE stream open after `done` to deliver evaluation results:
@@ -357,6 +365,29 @@ GEMINI_API_KEY=...              # Required for LLM-as-judge evaluation (Gemini F
 ENABLE_EVALUATION=true          # Set to "false" to disable LLM-as-judge evaluation (default: enabled)
 ZAPIER_WEBHOOK_URL=...          # Optional: Zapier webhook for evaluation logging to Google Sheets
 ```
+
+## Testing
+
+The project uses Vitest with React Testing Library for component testing.
+
+```bash
+# Run tests in watch mode
+npm run test
+
+# Run tests once
+npm run test:run
+```
+
+**Test files location**: `src/components/chat/__tests__/`
+
+**Current test coverage**:
+- `CopyButton.test.tsx`: Copy-to-clipboard functionality, visual feedback
+- `ChartRenderer.test.tsx`: CSV export with escaping, PNG export SVG processing
+- `ConfidenceBadge.test.tsx`: Evaluation display, copy functionality
+
+**Test setup**:
+- `vitest.config.ts`: Vitest configuration with React plugin and path aliases
+- `vitest.setup.ts`: Global mocks for clipboard, Blob, XMLSerializer, Image, canvas
 
 ## Common Tasks
 

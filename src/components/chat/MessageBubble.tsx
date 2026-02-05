@@ -1,6 +1,7 @@
 'use client';
 
 import { ConfidenceBadge } from './ConfidenceBadge';
+import { CopyButton } from './CopyButton';
 import { FlagButton } from './FlagButton';
 import { ChartRenderer } from './ChartRenderer';
 import { MarkdownRenderer, SchoolMapping } from './MarkdownRenderer';
@@ -78,17 +79,21 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {message.evaluation && (
           <div className="flex items-start justify-between gap-2">
             <ConfidenceBadge evaluation={message.evaluation} />
-            <FlagButton
-              messageId={message.id}
-              userQuery={message.userQuery || ''}
-              assistantResponse={message.content}
-              toolCalls={message.toolExecutions}
-              evaluation={message.evaluation}
-            />
+            <div className="flex items-center gap-1">
+              <CopyButton text={message.content} />
+              <FlagButton
+                messageId={message.id}
+                userQuery={message.userQuery || ''}
+                assistantResponse={message.content}
+                toolCalls={message.toolExecutions}
+                evaluation={message.evaluation}
+              />
+            </div>
           </div>
         )}
         {!message.evaluation && !message.isEvaluating && !message.isLoading && !message.isStreaming && message.content && (
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2 flex justify-end gap-1">
+            <CopyButton text={message.content} />
             <FlagButton
               messageId={message.id}
               userQuery={message.userQuery || ''}

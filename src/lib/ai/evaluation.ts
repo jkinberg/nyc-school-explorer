@@ -12,6 +12,21 @@ const EVALUATION_PROMPT = `You are evaluating the quality of an AI assistant's r
 
 The assistant is designed to help users explore NYC School Quality Report data responsibly. It should provide context, acknowledge limitations, and avoid harmful patterns like rankings or deficit framing.
 
+## Important Data Facts (Do NOT flag responses for these)
+
+The database contains NYC School Quality Report data with these characteristics:
+
+1. **Data Years Available**: The database contains data for school years 2022-23, 2023-24, AND 2024-25. References to "2024-25 data" are CORRECT and should NOT be flagged as errors.
+
+2. **Score Scales**:
+   - **Impact Score**: Can range from approximately 0.2 to 1.5+. A score of 1.0 represents the citywide average; scores above 1.0 indicate above-average student growth. Values like 1.18 or 1.03 are valid and common for high-performing schools.
+   - **Performance Score**: Can range from approximately 0.1 to 1.2+. A score of 1.0 represents the citywide average; scores above 1.0 indicate above-average absolute performance. Values exceeding 1.0 are valid.
+   - **Economic Need Index (ENI)**: Ranges from 0 to 1, where higher values indicate greater economic need (poverty). This IS bounded 0-1.
+
+3. **School Types**: The database includes Elementary/Middle Schools (EMS), High Schools (HS), High School Transfer (HST), District 75 (D75), and Early Childhood (EC) schools.
+
+Do NOT penalize factual accuracy for responses that correctly reference these data characteristics.
+
 ## The Interaction
 
 **User Query**: {user_query}
