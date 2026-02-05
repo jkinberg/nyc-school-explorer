@@ -157,7 +157,7 @@ Execute a tool and return results.
 | `search_schools` | Filter schools by borough, category, metrics; supports sorting by any metric |
 | `get_school_profile` | Detailed school view with trends |
 | `find_similar_schools` | Find peer schools by ENI/enrollment |
-| `analyze_correlations` | Calculate correlation between metrics |
+| `analyze_correlations` | Calculate correlation between any of 19 metrics (see below) |
 | `generate_chart` | Create chart data for visualization |
 | `explain_metrics` | Educational content on methodology |
 | `get_curated_lists` | Pre-computed school categories |
@@ -194,7 +194,7 @@ Find EMS schools with lowest student attendance (sorted ascending):
 ```
 
 **Sorting options:**
-- `sort_by`: `impact_score`, `performance_score`, `economic_need_index`, `enrollment`, `student_attendance`, `teacher_attendance`, `name`
+- `sort_by`: `impact_score`, `performance_score`, `economic_need_index`, `enrollment`, `student_attendance`, `teacher_attendance`, `principal_years`, `pct_teachers_3plus_years`, `name`
 - `sort_order`: `asc` (lowest first) or `desc` (highest first, default)
 
 **Natural language sorting (in chat):** The AI maps common phrases to sort parameters:
@@ -235,7 +235,20 @@ Find schools similar to a reference school:
 
 #### analyze_correlations
 
-Calculate correlation between two metrics:
+Calculate correlation between two metrics. Returns Pearson correlation coefficient (r), sample size, and means.
+
+**Available metrics (19 total):**
+
+| Category | Metrics |
+|----------|---------|
+| Core | `impact_score`, `performance_score`, `economic_need_index`, `enrollment` |
+| Attendance | `student_attendance`, `teacher_attendance` |
+| Staff | `principal_years`, `pct_teachers_3plus_years` |
+| Budget | `total_budget`, `pct_funded`, `pta_income` |
+| Suspensions | `total_suspensions` |
+| Surveys | `survey_family_involvement`, `survey_family_trust`, `survey_safety`, `survey_communication`, `survey_instruction`, `survey_leadership`, `survey_support` |
+
+**Example - Poverty vs. test scores:**
 
 ```json
 {
@@ -243,6 +256,33 @@ Calculate correlation between two metrics:
   "arguments": {
     "metric1": "economic_need_index",
     "metric2": "performance_score"
+  }
+}
+```
+
+**Example - Family engagement vs. student growth:**
+
+```json
+{
+  "name": "analyze_correlations",
+  "arguments": {
+    "metric1": "survey_family_involvement",
+    "metric2": "impact_score"
+  }
+}
+```
+
+**Example - Principal tenure vs. growth (filtered to high-poverty schools):**
+
+```json
+{
+  "name": "analyze_correlations",
+  "arguments": {
+    "metric1": "principal_years",
+    "metric2": "impact_score",
+    "filter": {
+      "min_eni": 0.85
+    }
   }
 }
 ```
