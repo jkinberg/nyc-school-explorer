@@ -44,9 +44,22 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 ### Running Tests
 
 ```bash
-npm run test       # Watch mode
-npm run test:run   # Run once
+npm run test           # Watch mode
+npm run test:run       # Run once (CI)
+npm run test:coverage  # With coverage report
 ```
+
+**275 tests** across 10 test files, running in ~1.4 seconds:
+
+| Module | Tests | Focus |
+|--------|-------|-------|
+| AI Guardrails | 77 | Prefilter patterns, evaluation scoring |
+| MCP Tools | 56 | Search filtering, profile lookup, context |
+| Utilities | 73 | Formatting, fuzzy matching |
+| Database Logic | 35 | Abbreviations, correlations, categories |
+| UI Components | 34 | Chart export, copy functionality |
+
+See [CLAUDE.md](CLAUDE.md#testing) for detailed testing documentation.
 
 ## Tech Stack
 
