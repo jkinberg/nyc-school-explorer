@@ -634,7 +634,8 @@ function generateToolResultSummary(toolName: string, result: Record<string, unkn
 // The full unsummarized result is still stored in toolResults[] for evaluation.
 const ESSENTIAL_SCHOOL_FIELDS = [
   'dbn', 'name', 'borough', 'impact_score', 'performance_score',
-  'economic_need_index', 'enrollment', 'category', 'is_charter'
+  'economic_need_index', 'enrollment', 'category', 'is_charter',
+  'student_attendance', 'teacher_attendance'
 ] as const;
 
 function pickEssentialFields(school: Record<string, unknown>): Record<string, unknown> {
