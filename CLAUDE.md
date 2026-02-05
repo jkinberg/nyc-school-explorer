@@ -265,10 +265,32 @@ _context: {
 3. If blocked, return reframe immediately (with `evaluating: false`)
 4. Call Claude with system prompt and tool definitions
 5. Execute any tool calls Claude requests
-6. Stream response via SSE (`text_delta` events)
-7. Emit `done` event with `evaluating: true/false` flag
-8. If evaluation enabled: await LLM-as-judge evaluation (10s timeout), emit `evaluation` SSE event
-9. Close stream
+6. **Summarize tool results** before sending back to Claude (see below)
+7. Stream response via SSE (`text_delta` events)
+8. Emit `done` event with `evaluating: true/false` flag
+9. If evaluation enabled: await LLM-as-judge evaluation (10s timeout), emit `evaluation` SSE event
+10. Close stream
+
+### Tool Result Summarization (ESSENTIAL_SCHOOL_FIELDS)
+
+To reduce token usage, tool results are summarized before being sent back to Claude. The `ESSENTIAL_SCHOOL_FIELDS` constant in `src/app/api/chat/route.ts` defines which school fields are preserved:
+
+```typescript
+const ESSENTIAL_SCHOOL_FIELDS = [
+  'dbn', 'name', 'borough', 'impact_score', 'performance_score',
+  'economic_need_index', 'enrollment', 'category', 'is_charter',
+  'student_attendance', 'teacher_attendance'
+] as const;
+```
+
+**IMPORTANT**: If you add a new field to school data that Claude needs to see, you must add it to this list. Otherwise, Claude will not receive the field in tool results and may incorrectly claim the data is unavailable.
+
+The full unsummarized tool results are still:
+1. Sent to the client via SSE events (for UI display)
+2. Stored for LLM-as-judge evaluation
+3. Used for school name extraction and linking
+
+Only the conversation context sent back to Claude is summarized.
 
 ### Chat Interface Features
 
