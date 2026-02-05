@@ -168,7 +168,15 @@ export function analyzeCorrelationsTool(params: AnalyzeCorrelationsParams): Corr
 
 export const analyzeCorrelationsDefinition = {
   name: 'analyze_correlations',
-  description: `Calculate correlation between metrics across schools.
+  description: `Calculate the statistical correlation (r-value) between metrics across schools.
+
+USE THIS TOOL when users ask about:
+- "Is there a correlation between X and Y?"
+- "What's the relationship between family engagement and outcomes?"
+- "Does attendance correlate with growth?"
+- "Are these metrics related?"
+
+DO NOT use generate_chart for correlation questions - use THIS tool to get the actual r-value.
 
 IMPORTANT: Correlation does not imply causation. Results should always be presented with:
 - The correlation coefficient and what it means
@@ -181,14 +189,14 @@ Available metrics:
 - Attendance: student_attendance, teacher_attendance
 - Budget: total_budget, pct_funded, pta_income
 - Suspensions: total_suspensions
-- Survey scores: survey_family_involvement, survey_family_trust, survey_safety, survey_communication, survey_instruction, survey_leadership, survey_support
+- Survey scores: survey_family_involvement (family engagement), survey_family_trust, survey_safety, survey_communication, survey_instruction, survey_leadership, survey_support
 
 Common analyses:
-- Impact Score vs. Attendance
-- Performance Score vs. Economic Need
-- Impact Score vs. Family Involvement Survey
+- Family engagement vs. student growth: survey_family_involvement + impact_score
+- Poverty vs. test scores: economic_need_index + performance_score
+- Attendance vs. growth: student_attendance + impact_score
 
-Returns statistical results with required interpretive context.`,
+Returns correlation coefficient (r), sample size, means, and interpretive context.`,
   parameters: {
     type: 'object',
     properties: {
