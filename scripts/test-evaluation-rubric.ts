@@ -87,6 +87,11 @@ const TEST_QUERIES = [
     query: "Which Bronx schools have the lowest teacher attendance?",
     description: "Tests teacher attendance data recognition and sorting",
     expectedFacts: ["teacher_attendance", "Bronx", "sorted"]
+  },
+  {
+    query: "Is there a correlation between family engagement and impact scores?",
+    description: "Tests survey metrics availability and correlation tool (regression test for survey fields)",
+    expectedFacts: ["survey_family_involvement", "correlation", "impact_score"]
   }
 ];
 
