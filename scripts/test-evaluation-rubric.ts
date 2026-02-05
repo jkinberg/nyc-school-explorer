@@ -77,6 +77,16 @@ const TEST_QUERIES = [
     query: "What schools have improving test scores despite high poverty?",
     description: "Tests high-poverty threshold and growth framing",
     expectedFacts: ["ENI", "0.85", "Impact"]
+  },
+  {
+    query: "Which elementary schools in Manhattan have the lowest student attendance?",
+    description: "Tests attendance data recognition and sorting (regression test for hallucination fix)",
+    expectedFacts: ["student_attendance", "Manhattan", "EMS", "sorted"]
+  },
+  {
+    query: "Which Bronx schools have the lowest teacher attendance?",
+    description: "Tests teacher attendance data recognition and sorting",
+    expectedFacts: ["teacher_attendance", "Bronx", "sorted"]
   }
 ];
 
