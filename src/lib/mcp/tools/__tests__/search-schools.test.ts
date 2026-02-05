@@ -331,6 +331,64 @@ describe('searchSchoolsTool', () => {
         expect.stringContaining('Charter')
       );
     });
+
+    it('includes metrics_available showing data counts for each field', () => {
+      const mockSchools: SchoolWithMetrics[] = [
+        {
+          ...testSchools[0],
+          year: '2024-25',
+          enrollment: 450,
+          impact_score: 0.62,
+          performance_score: 0.58,
+          economic_need_index: 0.91,
+          student_attendance: 0.92,
+          teacher_attendance: 0.88,
+          category: 'high_growth_high_achievement',
+        },
+        {
+          ...testSchools[1],
+          year: '2024-25',
+          enrollment: 380,
+          impact_score: 0.59,
+          performance_score: null,
+          economic_need_index: 0.95,
+          student_attendance: 0.89,
+          teacher_attendance: null,
+          category: 'high_growth',
+        },
+      ];
+      vi.mocked(queries.searchSchools).mockReturnValue(mockSchools);
+
+      const result = searchSchoolsTool({});
+
+      expect(result._context.metrics_available).toBeDefined();
+      expect(result._context.metrics_available?.impact_score).toBe(2);
+      expect(result._context.metrics_available?.performance_score).toBe(1);
+      expect(result._context.metrics_available?.student_attendance).toBe(2);
+      expect(result._context.metrics_available?.teacher_attendance).toBe(1);
+    });
+
+    it('includes sort_applied when sort_by is specified', () => {
+      vi.mocked(queries.searchSchools).mockReturnValue([]);
+
+      const result = searchSchoolsTool({
+        sort_by: 'student_attendance',
+        sort_order: 'asc'
+      });
+
+      expect(result._context.sort_applied).toBeDefined();
+      expect(result._context.sort_applied?.field).toBe('student_attendance');
+      expect(result._context.sort_applied?.order).toBe('asc');
+      expect(result._context.sort_applied?.note).toContain('student_attendance');
+    });
+
+    it('does not include sort_applied when no sort_by specified', () => {
+      vi.mocked(queries.searchSchools).mockReturnValue([]);
+
+      const result = searchSchoolsTool({});
+
+      expect(result._context.sort_applied).toBeUndefined();
+    });
   });
 
   describe('category mapping', () => {

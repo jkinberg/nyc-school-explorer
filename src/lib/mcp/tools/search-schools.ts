@@ -112,12 +112,28 @@ export function searchSchoolsTool(params: SearchSchoolsParams): SearchSchoolsRes
     );
   }
 
+  // Count how many schools have values for key metrics
+  const metricsWithData: Record<string, number> = {
+    impact_score: schools.filter(s => s.impact_score !== null && s.impact_score !== undefined).length,
+    performance_score: schools.filter(s => s.performance_score !== null && s.performance_score !== undefined).length,
+    economic_need_index: schools.filter(s => s.economic_need_index !== null && s.economic_need_index !== undefined).length,
+    student_attendance: schools.filter(s => s.student_attendance !== null && s.student_attendance !== undefined).length,
+    teacher_attendance: schools.filter(s => s.teacher_attendance !== null && s.teacher_attendance !== undefined).length,
+    enrollment: schools.filter(s => s.enrollment !== null && s.enrollment !== undefined).length,
+  };
+
   return {
     schools,
     total_count: totalCount,
     _context: {
       sample_size: schools.length,
       data_year: year,
+      sort_applied: params.sort_by ? {
+        field: params.sort_by,
+        order: params.sort_order || 'desc',
+        note: `Results are sorted by ${params.sort_by} (${params.sort_order || 'desc'}). The ${params.sort_by} value for each school is included in the school objects above.`
+      } : undefined,
+      metrics_available: metricsWithData,
       citywide_medians: {
         impact: citywideStats?.median_impact_score || 0.50,
         performance: citywideStats?.median_performance_score || 0.50,

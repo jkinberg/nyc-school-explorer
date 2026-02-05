@@ -187,6 +187,13 @@ export interface ResponseContext {
   limitations: string[];
   methodology_note?: string;
   value_range?: { min: number; max: number };
+  // Added to help Claude recognize sorting and available data
+  sort_applied?: {
+    field: string;
+    order: string;
+    note: string;
+  };
+  metrics_available?: Record<string, number>;  // field_name: count of schools with data
 }
 
 // Metric explanation content
