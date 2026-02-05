@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import {
   ScatterChart,
   Scatter,
@@ -13,6 +14,14 @@ import {
   Legend,
 } from 'recharts';
 import type { ChartData } from '@/types/chat';
+
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[^a-z0-9\s-]/gi, '')
+    .replace(/\s+/g, '-')
+    .toLowerCase()
+    .slice(0, 50);
+}
 
 interface ChartRendererProps {
   chart: ChartData;
@@ -58,6 +67,67 @@ const CHARTER_LABELS: Record<string, string> = {
 
 export function ChartRenderer({ chart }: ChartRendererProps) {
   const { type, title, xAxis, yAxis, data, colorBy } = chart;
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const exportAsPng = async () => {
+    const svgElement = chartContainerRef.current?.querySelector('svg');
+    if (!svgElement) return;
+
+    // Clone and prepare SVG
+    const clone = svgElement.cloneNode(true) as SVGElement;
+    const bbox = svgElement.getBoundingClientRect();
+    clone.setAttribute('width', String(bbox.width));
+    clone.setAttribute('height', String(bbox.height));
+
+    // Convert to canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = img.width * 2; // 2x for retina
+      canvas.height = img.height * 2;
+      ctx.scale(2, 2);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      const link = document.createElement('a');
+      link.download = `${sanitizeFilename(title)}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const exportAsCsv = () => {
+    if (!data || data.length === 0) return;
+
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(',')];
+
+    data.forEach(row => {
+      const values = headers.map(h => {
+        const val = row[h];
+        if (typeof val === 'string') {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val ?? '';
+      });
+      csvRows.push(values.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.download = `${sanitizeFilename(title)}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   // Handle empty data
   if (!data || data.length === 0) {
@@ -141,11 +211,35 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 my-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        {title}
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {title}
+        </h3>
+        <div className="flex gap-1">
+          <button
+            onClick={exportAsPng}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Download as PNG"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            PNG
+          </button>
+          <button
+            onClick={exportAsCsv}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            title="Download as CSV"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            CSV
+          </button>
+        </div>
+      </div>
 
-      <div className="h-80">
+      <div className="h-80" ref={chartContainerRef}>
         <ResponsiveContainer width="100%" height="100%">
           {type === 'scatter' ? (
             <ScatterChart margin={{ top: 40, right: 20, bottom: 50, left: 60 }}>
