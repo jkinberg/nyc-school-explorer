@@ -16,14 +16,44 @@ The assistant is designed to help users explore NYC School Quality Report data r
 
 The database contains NYC School Quality Report data with these characteristics:
 
-1. **Data Years Available**: The database contains data for school years 2022-23, 2023-24, AND 2024-25. References to "2024-25 data" are CORRECT and should NOT be flagged as errors.
+1. **Data Years Available**: The database contains data for school years 2022-23, 2023-24, AND 2024-25. However, **Impact Score and Performance Score were only introduced in 2023-24**. The 2022-23 data has these columns as NULL. So statements like "only 2 years of Impact Score data" are CORRECT.
 
 2. **Score Scales**:
-   - **Impact Score**: Can range from approximately 0.2 to 1.5+. A score of 1.0 represents the citywide average; scores above 1.0 indicate above-average student growth. Values like 1.18 or 1.03 are valid and common for high-performing schools.
-   - **Performance Score**: Can range from approximately 0.1 to 1.2+. A score of 1.0 represents the citywide average; scores above 1.0 indicate above-average absolute performance. Values exceeding 1.0 are valid.
-   - **Economic Need Index (ENI)**: Ranges from 0 to 1, where higher values indicate greater economic need (poverty). This IS bounded 0-1.
+   - **Impact Score**: Ranges from approximately 0.2 to 1.0+. The **citywide median is 0.50**. Scores above 0.50 indicate above-median student growth. A score of 0.55+ is considered "high growth" in this framework. Values like 0.60, 0.70, or even higher are valid for top-performing schools.
+   - **Performance Score**: Ranges from approximately 0.1 to 1.0+. The **citywide median is approximately 0.49**. Scores above 0.50 indicate above-median absolute performance.
+   - **Economic Need Index (ENI)**: Ranges from 0 to 1, where higher values indicate greater economic need (poverty). The citywide median is approximately 0.72. ENI ≥ 0.85 is the threshold for "high-poverty" schools.
 
 3. **School Types**: The database includes Elementary/Middle Schools (EMS), High Schools (HS), High School Transfer (HST), District 75 (D75), and Early Childhood (EC) schools.
+
+4. **Category Thresholds**: Schools are categorized using Impact ≥ 0.55, Performance ≥ 0.50, and ENI ≥ 0.85. These thresholds were validated for EMS schools.
+
+5. **Known Correlations**:
+   - Impact Score vs ENI: r ≈ -0.29 (weak negative correlation)
+   - Performance Score vs ENI: r ≈ -0.69 (strong negative correlation)
+   - These correlation values are correct and should not be flagged.
+
+6. **Approximate School Counts**:
+   - ~1,874 total schools with metrics in 2024-25
+   - ~710 high-poverty EMS schools (ENI ≥ 0.85)
+   - Exact counts for categories vary; the assistant should query dynamically.
+
+7. **Data Sources**:
+   - Budget data comes from LL16 (Local Law 16) reports
+   - Suspension data comes from LL93 (Local Law 93) reports
+   - Redacted suspension values show "R" for counts of 1-5 (privacy protection)
+   - PTA data comes from DOE financial reporting
+
+8. **Category Naming**:
+   - The database stores "developing" but the API returns "below_growth_threshold"
+   - The database stores "below_threshold" but the API returns "lower_economic_need"
+   - Both naming conventions are correct depending on context.
+
+9. **Persistent High Growth**:
+   - Defined as schools with high Impact Score in BOTH 2023-24 AND 2024-25
+   - Many schools do NOT maintain high-growth status year-over-year—this is a correct caveat
+   - Statements about volatility or lack of persistence are accurate, not errors.
+
+10. **Rating Column Changes**: NYC DOE renamed rating columns between 2022-23 and 2023-24. Year-over-year rating comparisons should acknowledge potential methodology changes.
 
 Do NOT penalize factual accuracy for responses that correctly reference these data characteristics.
 
