@@ -639,8 +639,10 @@ const ESSENTIAL_SCHOOL_FIELDS = [
   // Survey scores (family engagement, safety, etc.)
   'survey_family_involvement', 'survey_family_trust', 'survey_safety',
   'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
-  // Ratings
-  'rating_instruction', 'rating_safety', 'rating_families'
+  // Ratings (string values like "Meeting Target")
+  'rating_instruction', 'rating_safety', 'rating_families',
+  // Staff metrics
+  'principal_years', 'pct_teachers_3plus_years'
 ] as const;
 
 function pickEssentialFields(school: Record<string, unknown>): Record<string, unknown> {

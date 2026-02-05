@@ -7,7 +7,9 @@ type MetricName =
   | 'total_budget' | 'pct_funded' | 'total_suspensions' | 'pta_income'
   // Survey scores
   | 'survey_family_involvement' | 'survey_family_trust' | 'survey_safety'
-  | 'survey_communication' | 'survey_instruction' | 'survey_leadership' | 'survey_support';
+  | 'survey_communication' | 'survey_instruction' | 'survey_leadership' | 'survey_support'
+  // Staff metrics
+  | 'principal_years' | 'pct_teachers_3plus_years';
 
 export interface AnalyzeCorrelationsParams {
   metric1: MetricName;
@@ -60,7 +62,10 @@ const METRIC_LABELS: Record<string, string> = {
   survey_communication: 'Communication Survey Score',
   survey_instruction: 'Instruction Survey Score',
   survey_leadership: 'Leadership Survey Score',
-  survey_support: 'Support Survey Score'
+  survey_support: 'Support Survey Score',
+  // Staff metrics
+  principal_years: 'Principal Tenure (years)',
+  pct_teachers_3plus_years: 'Teachers with 3+ Years Experience (%)'
 };
 
 function interpretCorrelation(r: number): string {
@@ -187,6 +192,7 @@ IMPORTANT: Correlation does not imply causation. Results should always be presen
 Available metrics:
 - Core: impact_score, performance_score, economic_need_index, enrollment
 - Attendance: student_attendance, teacher_attendance
+- Staff: principal_years (principal tenure), pct_teachers_3plus_years (teacher experience)
 - Budget: total_budget, pct_funded, pta_income
 - Suspensions: total_suspensions
 - Survey scores: survey_family_involvement (family engagement), survey_family_trust, survey_safety, survey_communication, survey_instruction, survey_leadership, survey_support
@@ -195,6 +201,8 @@ Common analyses:
 - Family engagement vs. student growth: survey_family_involvement + impact_score
 - Poverty vs. test scores: economic_need_index + performance_score
 - Attendance vs. growth: student_attendance + impact_score
+- Teacher experience vs. outcomes: pct_teachers_3plus_years + impact_score
+- Principal tenure vs. growth: principal_years + impact_score
 
 Returns correlation coefficient (r), sample size, means, and interpretive context.`,
   parameters: {
@@ -207,7 +215,8 @@ Returns correlation coefficient (r), sample size, means, and interpretive contex
           'student_attendance', 'teacher_attendance', 'enrollment',
           'total_budget', 'pct_funded', 'total_suspensions', 'pta_income',
           'survey_family_involvement', 'survey_family_trust', 'survey_safety',
-          'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support'
+          'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
+          'principal_years', 'pct_teachers_3plus_years'
         ],
         description: 'First metric to correlate'
       },
@@ -218,7 +227,8 @@ Returns correlation coefficient (r), sample size, means, and interpretive contex
           'student_attendance', 'teacher_attendance', 'enrollment',
           'total_budget', 'pct_funded', 'total_suspensions', 'pta_income',
           'survey_family_involvement', 'survey_family_trust', 'survey_safety',
-          'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support'
+          'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
+          'principal_years', 'pct_teachers_3plus_years'
         ],
         description: 'Second metric to correlate'
       },

@@ -213,6 +213,8 @@ When users ask about these concepts, map them to the correct metric names:
 | "poverty", "economic need", "disadvantage" | economic_need_index |
 | "student growth", "learning gains", "progress" | impact_score |
 | "test scores", "achievement", "outcomes" | performance_score |
+| "principal tenure", "principal experience", "principal stability" | principal_years |
+| "teacher experience", "experienced teachers", "teacher tenure" | pct_teachers_3plus_years |
 
 ### Handling School Searches
 

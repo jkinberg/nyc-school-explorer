@@ -283,16 +283,23 @@ const ESSENTIAL_SCHOOL_FIELDS = [
   // Survey scores (family engagement, safety, etc.)
   'survey_family_involvement', 'survey_family_trust', 'survey_safety',
   'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
-  // Ratings
-  'rating_instruction', 'rating_safety', 'rating_families'
+  // Ratings (string values like "Meeting Target")
+  'rating_instruction', 'rating_safety', 'rating_families',
+  // Staff metrics
+  'principal_years', 'pct_teachers_3plus_years'
 ] as const;
 ```
 
 **IMPORTANT**: If you add a new field to school data that Claude needs to see, you must add it to this list. Otherwise, Claude will not receive the field in tool results and may incorrectly claim the data is unavailable.
 
-The `analyze_correlations` tool also has an enum of supported metrics. If you add a new metric field, update both:
+The `analyze_correlations` tool also has an enum of supported metrics. If you add a new **numeric** metric field, update:
 1. `ESSENTIAL_SCHOOL_FIELDS` in `src/app/api/chat/route.ts`
-2. The metric enums in `src/lib/mcp/tools/analyze-correlations.ts`
+2. The `MetricName` type in `src/lib/mcp/tools/analyze-correlations.ts`
+3. The `METRIC_LABELS` mapping in the same file
+4. The enum in `analyzeCorrelationsDefinition.parameters`
+5. The natural language mapping in `src/lib/ai/system-prompt.ts`
+
+Note: Rating fields (rating_instruction, rating_safety, rating_families) are strings like "Meeting Target" and cannot be used in correlations.
 
 The full unsummarized tool results are still:
 1. Sent to the client via SSE events (for UI display)
