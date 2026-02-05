@@ -9,8 +9,9 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **LLM-as-judge evaluation**: every response is scored on factual accuracy, context inclusion, limitation acknowledgment, responsible framing, and query relevance -- scores are shown in the chat UI
 - **Evaluation logging**: low-scoring responses (< 75) are auto-logged; users can flag any response with feedback via modal
 - **MCP tools** for school search (with natural language sorting), profiles, correlations, charts, and curated lists
-- **Interactive charts** via Recharts for data visualization
+- **Interactive charts** via Recharts for data visualization with PNG/CSV export
 - **School profiles** with year-over-year comparison
+- **Copy and export**: copy response text, export charts as PNG or CSV, copy evaluation scores
 
 ### Chat Interface
 
@@ -18,6 +19,9 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Auto-linked school names**: school names in responses link directly to profile pages (opens in new tab)
 - **Tool visibility**: collapsible cards show when Claude is searching, analyzing, or generating charts
 - **Smart scrolling**: no auto-scroll during streaming; floating "scroll to bottom" button when reading history
+- **Copy response text**: copy button on each AI response to copy plain text to clipboard
+- **Export charts**: download charts as PNG (high-resolution) or CSV (with proper escaping)
+- **Copy evaluation**: copy button in evaluation dropdown to copy scores and summary
 
 ## Getting Started
 
@@ -37,6 +41,13 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore page to start chatting.
 
+### Running Tests
+
+```bash
+npm run test       # Watch mode
+npm run test:run   # Run once
+```
+
 ## Tech Stack
 
 - **Framework**: Next.js 16 with App Router
@@ -46,6 +57,7 @@ Open [http://localhost:3000](http://localhost:3000) and navigate to the Explore 
 - **Charts**: Recharts
 - **Markdown**: react-markdown with remark-gfm
 - **Styling**: Tailwind CSS 4
+- **Testing**: Vitest with React Testing Library
 
 ## Environment Variables
 
