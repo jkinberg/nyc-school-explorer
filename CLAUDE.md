@@ -279,11 +279,20 @@ To reduce token usage, tool results are summarized before being sent back to Cla
 const ESSENTIAL_SCHOOL_FIELDS = [
   'dbn', 'name', 'borough', 'impact_score', 'performance_score',
   'economic_need_index', 'enrollment', 'category', 'is_charter',
-  'student_attendance', 'teacher_attendance'
+  'student_attendance', 'teacher_attendance',
+  // Survey scores (family engagement, safety, etc.)
+  'survey_family_involvement', 'survey_family_trust', 'survey_safety',
+  'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
+  // Ratings
+  'rating_instruction', 'rating_safety', 'rating_families'
 ] as const;
 ```
 
 **IMPORTANT**: If you add a new field to school data that Claude needs to see, you must add it to this list. Otherwise, Claude will not receive the field in tool results and may incorrectly claim the data is unavailable.
+
+The `analyze_correlations` tool also has an enum of supported metrics. If you add a new metric field, update both:
+1. `ESSENTIAL_SCHOOL_FIELDS` in `src/app/api/chat/route.ts`
+2. The metric enums in `src/lib/mcp/tools/analyze-correlations.ts`
 
 The full unsummarized tool results are still:
 1. Sent to the client via SSE events (for UI display)

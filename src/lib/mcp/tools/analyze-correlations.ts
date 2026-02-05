@@ -1,9 +1,17 @@
 import { getCorrelation, getCitywideStats, countSchools } from '@/lib/db/queries';
 import type { ResponseContext } from '@/types/school';
 
+type MetricName =
+  | 'impact_score' | 'performance_score' | 'economic_need_index'
+  | 'student_attendance' | 'teacher_attendance' | 'enrollment'
+  | 'total_budget' | 'pct_funded' | 'total_suspensions' | 'pta_income'
+  // Survey scores
+  | 'survey_family_involvement' | 'survey_family_trust' | 'survey_safety'
+  | 'survey_communication' | 'survey_instruction' | 'survey_leadership' | 'survey_support';
+
 export interface AnalyzeCorrelationsParams {
-  metric1: 'impact_score' | 'performance_score' | 'economic_need_index' | 'student_attendance' | 'teacher_attendance' | 'enrollment' | 'total_budget' | 'pct_funded' | 'total_suspensions' | 'pta_income';
-  metric2: 'impact_score' | 'performance_score' | 'economic_need_index' | 'student_attendance' | 'teacher_attendance' | 'enrollment' | 'total_budget' | 'pct_funded' | 'total_suspensions' | 'pta_income';
+  metric1: MetricName;
+  metric2: MetricName;
   filter?: {
     min_eni?: number;
     max_eni?: number;
@@ -44,7 +52,15 @@ const METRIC_LABELS: Record<string, string> = {
   total_budget: 'Total Budget Allocation',
   pct_funded: 'FSF % Funded',
   total_suspensions: 'Total Suspensions',
-  pta_income: 'PTA Total Income'
+  pta_income: 'PTA Total Income',
+  // Survey scores
+  survey_family_involvement: 'Family Involvement Survey Score',
+  survey_family_trust: 'Family Trust Survey Score',
+  survey_safety: 'Safety Survey Score',
+  survey_communication: 'Communication Survey Score',
+  survey_instruction: 'Instruction Survey Score',
+  survey_leadership: 'Leadership Survey Score',
+  survey_support: 'Support Survey Score'
 };
 
 function interpretCorrelation(r: number): string {
@@ -160,10 +176,17 @@ IMPORTANT: Correlation does not imply causation. Results should always be presen
 - Acknowledgment that other factors may explain the relationship
 - Competing hypotheses for any pattern observed
 
+Available metrics:
+- Core: impact_score, performance_score, economic_need_index, enrollment
+- Attendance: student_attendance, teacher_attendance
+- Budget: total_budget, pct_funded, pta_income
+- Suspensions: total_suspensions
+- Survey scores: survey_family_involvement, survey_family_trust, survey_safety, survey_communication, survey_instruction, survey_leadership, survey_support
+
 Common analyses:
 - Impact Score vs. Attendance
 - Performance Score vs. Economic Need
-- Impact Score vs. Teacher Experience
+- Impact Score vs. Family Involvement Survey
 
 Returns statistical results with required interpretive context.`,
   parameters: {
@@ -171,12 +194,24 @@ Returns statistical results with required interpretive context.`,
     properties: {
       metric1: {
         type: 'string',
-        enum: ['impact_score', 'performance_score', 'economic_need_index', 'student_attendance', 'teacher_attendance', 'enrollment', 'total_budget', 'pct_funded', 'total_suspensions', 'pta_income'],
+        enum: [
+          'impact_score', 'performance_score', 'economic_need_index',
+          'student_attendance', 'teacher_attendance', 'enrollment',
+          'total_budget', 'pct_funded', 'total_suspensions', 'pta_income',
+          'survey_family_involvement', 'survey_family_trust', 'survey_safety',
+          'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support'
+        ],
         description: 'First metric to correlate'
       },
       metric2: {
         type: 'string',
-        enum: ['impact_score', 'performance_score', 'economic_need_index', 'student_attendance', 'teacher_attendance', 'enrollment', 'total_budget', 'pct_funded', 'total_suspensions', 'pta_income'],
+        enum: [
+          'impact_score', 'performance_score', 'economic_need_index',
+          'student_attendance', 'teacher_attendance', 'enrollment',
+          'total_budget', 'pct_funded', 'total_suspensions', 'pta_income',
+          'survey_family_involvement', 'survey_family_trust', 'survey_safety',
+          'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support'
+        ],
         description: 'Second metric to correlate'
       },
       filter: {

@@ -635,7 +635,12 @@ function generateToolResultSummary(toolName: string, result: Record<string, unkn
 const ESSENTIAL_SCHOOL_FIELDS = [
   'dbn', 'name', 'borough', 'impact_score', 'performance_score',
   'economic_need_index', 'enrollment', 'category', 'is_charter',
-  'student_attendance', 'teacher_attendance'
+  'student_attendance', 'teacher_attendance',
+  // Survey scores (family engagement, safety, etc.)
+  'survey_family_involvement', 'survey_family_trust', 'survey_safety',
+  'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
+  // Ratings
+  'rating_instruction', 'rating_safety', 'rating_families'
 ] as const;
 
 function pickEssentialFields(school: Record<string, unknown>): Record<string, unknown> {
