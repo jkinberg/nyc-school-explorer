@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { checkPrefilter } from '@/lib/ai/prefilter';
 import { getSystemPrompt } from '@/lib/ai/system-prompt';
 import { evaluateResponse } from '@/lib/ai/evaluation';
-import { generateSuggestedQueriesWithLLM } from '@/lib/ai/suggestions';
+import { generateSuggestedQueriesWithLLM, generateFallbackSuggestions } from '@/lib/ai/suggestions';
 import { ALL_TOOL_DEFINITIONS, executeTool } from '@/lib/mcp';
 import {
   checkRateLimit,
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
             tasks.push((async () => {
               try {
                 const result = await geminiTimeout(
-                  generateSuggestedQueriesWithLLM(latestUserMessage.content, accumulatedText, toolNames),
+                  generateSuggestedQueriesWithLLM(latestUserMessage.content, accumulatedText, toolResults),
                   15_000
                 );
                 // generateSuggestedQueriesWithLLM returns validated suggestions (guardrail Layer B applied internally)
@@ -364,12 +364,12 @@ export async function POST(request: NextRequest) {
                 if (result !== TIMEOUT && result && result.length > 0) {
                   controller.enqueue(encoder.encode(sseEvent('suggested_queries', { suggestions: result })));
                 } else {
-                  // Fallback to pattern matching (guaranteed safe)
-                  const fallback = generateSuggestedQueries(accumulatedText, toolResults);
+                  // Fallback to entity-based contextual suggestions
+                  const fallback = generateFallbackSuggestions(toolResults, accumulatedText);
                   controller.enqueue(encoder.encode(sseEvent('suggested_queries', { suggestions: fallback })));
                 }
               } catch {
-                const fallback = generateSuggestedQueries(accumulatedText, toolResults);
+                const fallback = generateFallbackSuggestions(toolResults, accumulatedText);
                 controller.enqueue(encoder.encode(sseEvent('suggested_queries', { suggestions: fallback })));
               }
             })());
@@ -453,68 +453,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Generate contextual follow-up suggestions
-function generateSuggestedQueries(
-  response: string,
-  toolResults: string[]
-): { text: string; category: string }[] {
-  const suggestions: { text: string; category: string }[] = [];
-
-  // Check what was discussed to suggest relevant follow-ups
-  const lowerResponse = response.toLowerCase();
-  const toolResultsText = toolResults.join(' ').toLowerCase();
-
-  // If specific schools were mentioned
-  if (toolResultsText.includes('dbn') || lowerResponse.includes('school')) {
-    suggestions.push({
-      text: 'Find similar schools for comparison',
-      category: 'compare'
-    });
-  }
-
-  // If categories were mentioned
-  if (lowerResponse.includes('high growth') || lowerResponse.includes('strong growth')) {
-    suggestions.push({
-      text: 'How many schools maintain this status year-over-year?',
-      category: 'explore'
-    });
-  }
-
-  // If correlations were discussed
-  if (lowerResponse.includes('correlat') || lowerResponse.includes('relationship')) {
-    suggestions.push({
-      text: 'What other factors correlate with student growth?',
-      category: 'explore'
-    });
-  }
-
-  // If Impact Score was mentioned
-  if (lowerResponse.includes('impact score')) {
-    suggestions.push({
-      text: 'What does Impact Score actually measure?',
-      category: 'explain'
-    });
-  }
-
-  // If borough was mentioned
-  if (/bronx|brooklyn|manhattan|queens|staten island/i.test(lowerResponse)) {
-    suggestions.push({
-      text: 'Show me a chart comparing boroughs',
-      category: 'visualize'
-    });
-  }
-
-  // Default suggestions if none match
-  if (suggestions.length === 0) {
-    suggestions.push(
-      { text: 'Show me high-growth schools in high-poverty areas', category: 'explore' },
-      { text: 'What are the limitations of this data?', category: 'explain' }
-    );
-  }
-
-  return suggestions.slice(0, 3);
 }
 
 // Extract school name/DBN pairs for client-side linking
