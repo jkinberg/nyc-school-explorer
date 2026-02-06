@@ -12,6 +12,7 @@ export { analyzeCorrelationsTool, analyzeCorrelationsDefinition } from './tools/
 export { generateChartTool, generateChartDefinition } from './tools/generate-chart';
 export { explainMetricsTool, explainMetricsDefinition } from './tools/explain-metrics';
 export { getCuratedListsTool, getCuratedListsDefinition } from './tools/get-curated-lists';
+export { compareSchoolsTool, compareSchoolsDefinition } from './tools/compare-schools';
 
 // All tool definitions for Claude API
 export const ALL_TOOL_DEFINITIONS = [
@@ -237,6 +238,80 @@ filter: { borough: "Brooklyn", report_type: "EMS", min_eni: 0.85 }`,
       },
       required: ['list_type']
     }
+  },
+  {
+    name: 'compare_schools',
+    description: `Compare 2-10 schools across key metrics in a table format.
+
+COMPARISON TYPES:
+1. Specific schools: Provide list of DBNs or school names to compare
+2. School vs citywide: Set compare_to_citywide=true to include median column
+3. School vs similar: Set compare_to_similar=true to find peer schools by ENI/enrollment
+4. Filtered group: Use filter + limit to compare top schools matching criteria
+
+OUTPUT: Returns structured data for Claude to format as markdown table.
+
+ALWAYS include Economic Need Index when comparing school performance.
+Schools with different ENI levels are not directly comparable.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        dbns: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of school DBNs or names to compare (2-10 schools)',
+          maxItems: 10,
+          minItems: 1
+        },
+        compare_to_citywide: {
+          type: 'boolean',
+          description: 'Include citywide median as reference column'
+        },
+        compare_to_similar: {
+          type: 'boolean',
+          description: 'Compare first school to similar peers by ENI/enrollment'
+        },
+        metrics: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'impact_score', 'performance_score', 'economic_need_index', 'enrollment',
+              'student_attendance', 'teacher_attendance',
+              'principal_years', 'pct_teachers_3plus_years',
+              'total_budget', 'pct_funded',
+              'pta_income',
+              'total_suspensions',
+              'survey_family_involvement', 'survey_family_trust', 'survey_safety',
+              'survey_communication', 'survey_instruction', 'survey_leadership', 'survey_support',
+              'rating_instruction', 'rating_safety', 'rating_families',
+              'category'
+            ]
+          },
+          description: 'Specific metrics to compare. Default: core metrics + attendance + category. Budget/PTA/suspensions have caveats.'
+        },
+        include_trends: {
+          type: 'boolean',
+          description: 'Include year-over-year change columns'
+        },
+        filter: {
+          type: 'object',
+          properties: {
+            borough: { type: 'string', enum: ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island'] },
+            report_type: { type: 'string', enum: ['EMS', 'HS', 'HST', 'D75', 'EC'] },
+            category: { type: 'string', enum: ['high_growth', 'high_growth_high_achievement', 'high_achievement', 'below_growth_threshold', 'lower_economic_need'] },
+            min_eni: { type: 'number' }
+          },
+          description: 'Filter schools before comparing (for "top 5 Brooklyn schools" type queries)'
+        },
+        limit: {
+          type: 'number',
+          default: 5,
+          maximum: 10,
+          description: 'Max schools when using filter'
+        }
+      }
+    }
   }
 ];
 
@@ -270,6 +345,10 @@ export function executeTool(name: string, params: Record<string, unknown>): unkn
     case 'get_curated_lists':
       const { getCuratedListsTool } = require('./tools/get-curated-lists');
       return getCuratedListsTool(params);
+
+    case 'compare_schools':
+      const { compareSchoolsTool } = require('./tools/compare-schools');
+      return compareSchoolsTool(params);
 
     default:
       throw new Error(`Unknown tool: ${name}`);

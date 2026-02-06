@@ -43,7 +43,7 @@ export interface ConversationContext {
 
 // Chart data for visualization
 export interface ChartData {
-  type: 'scatter' | 'bar' | 'histogram' | 'line';
+  type: 'scatter' | 'bar' | 'histogram' | 'line' | 'diverging_bar';
   title: string;
   xAxis: {
     label: string;
@@ -55,6 +55,7 @@ export interface ChartData {
   };
   data: Record<string, unknown>[];
   colorBy?: string;
+  midpoint?: number;  // For diverging_bar reference line
   context: ResponseContext;
 }
 

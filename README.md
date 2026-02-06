@@ -8,7 +8,7 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Three-layer AI guardrails**: pre-filter, system prompt, and tool-level context to ensure responsible framing
 - **LLM-as-judge evaluation**: every response is scored on factual accuracy, context inclusion, limitation acknowledgment, responsible framing, and query relevance -- scores are shown in the chat UI
 - **Evaluation logging**: low-scoring responses (< 75) are auto-logged; users can flag any response with feedback via modal
-- **MCP tools** for school search (with natural language sorting), profiles, correlations (19 metrics including surveys and staff data), charts, and curated lists
+- **MCP tools** for school search (with natural language sorting), profiles, comparisons, correlations (19 metrics including surveys and staff data), charts, and curated lists
 - **Interactive charts** via Recharts for data visualization with PNG/CSV export
 - **School profiles** with year-over-year comparison
 - **Copy and export**: copy response text, export charts as PNG or CSV, copy evaluation scores
@@ -49,12 +49,12 @@ npm run test:run       # Run once (CI)
 npm run test:coverage  # With coverage report
 ```
 
-**278 tests** across 10 test files, running in ~1.4 seconds:
+**328 tests** across 12 test files, running in ~1.5 seconds:
 
 | Module | Tests | Focus |
 |--------|-------|-------|
 | AI Guardrails | 77 | Prefilter patterns, evaluation scoring |
-| MCP Tools | 59 | Search filtering, profile lookup, context, sorting |
+| MCP Tools | 109 | Search filtering, profile lookup, comparison, context, sorting |
 | Utilities | 73 | Formatting, fuzzy matching |
 | Database Logic | 35 | Abbreviations, correlations, categories |
 | UI Components | 34 | Chart export, copy functionality |

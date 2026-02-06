@@ -143,8 +143,9 @@ When querying categories:
 | `search_schools` | Filter schools by borough, category, metrics. Supports `query` param for name/DBN search, `sort_by` and `sort_order` for custom sorting |
 | `get_school_profile` | Detailed school view with YoY comparison. Returns suggestions if DBN not found |
 | `find_similar_schools` | Find peer schools by ENI (±5%) and enrollment (±20%) |
+| `compare_schools` | Compare 2-10 schools across metrics. Supports specific DBNs, vs citywide, vs similar peers, or filtered groups |
 | `analyze_correlations` | Calculate correlation between metrics. Supports 19 metrics including surveys and staff data |
-| `generate_chart` | Return data for Recharts visualizations |
+| `generate_chart` | Return data for Recharts visualizations (scatter, bar, histogram, yoy_change, diverging_bar) |
 | `explain_metrics` | Educational content about methodology |
 | `get_curated_lists` | Pre-computed High Growth, Strong Growth + Outcomes, Persistent High Growth lists |
 
@@ -183,6 +184,41 @@ The system prompt guides Claude on when to use each tool:
 - **School lookups** → `search_schools` or `get_school_profile`
 
 This prevents Claude from using `generate_chart` to answer correlation questions (which wouldn't provide the actual r-value).
+
+### Chart Types
+
+The `generate_chart` tool supports multiple chart types:
+
+| Chart Type | Purpose | Key Parameters |
+|------------|---------|----------------|
+| `scatter` | Explore relationships between two metrics | `x_metric`, `y_metric`, `color_by` |
+| `bar` | Compare categories or values | `x_metric` |
+| `histogram` | Show distribution of a single metric | `x_metric` |
+| `yoy_change` | Year-over-year comparison (scatter format) | `x_metric` |
+| `diverging_bar` | Show values above/below a threshold | `x_metric`, `midpoint`, `show_change` |
+
+### Diverging Bar Charts
+
+The `diverging_bar` chart type visualizes values relative to a threshold (midpoint):
+
+**Use cases:**
+- "Which schools are above or below expected growth?" (Impact Score vs 0.50)
+- "Which schools improved or declined from last year?" (YoY change vs 0)
+- "How do schools compare to the citywide average?"
+
+**Parameters:**
+- `midpoint`: Threshold value. Defaults: 0.50 for Impact, 0.49 for Performance, 0.90 for attendance
+- `show_change`: If true, calculates year-over-year change (midpoint defaults to 0)
+- `filter`: Supports all standard filters (borough, min_eni, report_type, is_charter, category)
+- `limit`: Max schools to display (default: 30)
+
+**Query pattern mapping:**
+| User says | Parameters |
+|-----------|------------|
+| "above or below expected" | `chart_type: "diverging_bar"` |
+| "exceed or fall short" | `chart_type: "diverging_bar"` |
+| "improved or declined" | `chart_type: "diverging_bar", show_change: true` |
+| "gained or lost ground" | `chart_type: "diverging_bar", show_change: true` |
 
 ### Fuzzy School Search
 
@@ -486,11 +522,11 @@ src/
 |--------|-------|-------|
 | AI Prefilter | 50 | Block patterns, flag patterns, false positive prevention |
 | AI Evaluation | 27 | Weighted scoring, confidence badges, flagging logic |
-| MCP Tools | 56 | Filtering, sorting, context generation, category mapping |
+| MCP Tools | 109 | Filtering, sorting, comparison, context generation, category mapping |
 | Database Queries | 35 | Abbreviation normalization, correlation math, category logic |
 | Utilities | 73 | Formatting edge cases, Levenshtein distance, fuzzy matching |
 | UI Components | 34 | Chart export, copy functionality, evaluation display |
-| **Total** | **275** | **~1.4 seconds runtime** |
+| **Total** | **328** | **~1.5 seconds runtime** |
 
 ### Testing Philosophy
 

@@ -97,6 +97,38 @@ const TEST_QUERIES = [
     query: "Does principal tenure correlate with student growth?",
     description: "Tests staff metrics and natural language mapping (principal tenure → principal_years)",
     expectedFacts: ["principal_years", "correlation", "impact_score"]
+  },
+  // Diverging bar chart tests
+  {
+    query: "Which Bronx schools are above or below expected student growth?",
+    description: "Tests diverging bar with Impact Score threshold",
+    expectedFacts: ["diverging", "0.50", "above", "below", "Bronx"]
+  },
+  {
+    query: "Which schools improved or declined in Impact Score from last year?",
+    description: "Tests diverging bar with YoY change",
+    expectedFacts: ["change", "improved", "declined", "2023-24", "2024-25"]
+  },
+  {
+    query: "Show charter schools above vs below median Impact Score",
+    description: "Tests diverging bar with charter filter",
+    expectedFacts: ["charter", "above", "below", "median"]
+  },
+  // School comparison tests
+  {
+    query: "Compare PS 188 and Stuyvesant High School",
+    description: "Tests compare_schools with specific schools by name",
+    expectedFacts: ["compare", "table", "Impact", "Performance", "ENI"]
+  },
+  {
+    query: "How does PS 188 compare to citywide averages?",
+    description: "Tests compare_schools with citywide column",
+    expectedFacts: ["citywide", "median", "compare"]
+  },
+  {
+    query: "Compare the top 5 high-growth schools in the Bronx",
+    description: "Tests compare_schools with filter",
+    expectedFacts: ["Bronx", "high growth", "table"]
   }
 ];
 

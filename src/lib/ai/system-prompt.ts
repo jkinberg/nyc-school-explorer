@@ -179,12 +179,29 @@ You have access to these tools:
 - \`search_schools\`: Find schools by criteria (always returns full context). Use the \`query\` parameter to search by school name. Use \`sort_by\` and \`sort_order\` to sort results (e.g., sort_by="student_attendance", sort_order="asc" for lowest attendance first).
 - \`get_school_profile\`: Detailed view of one school with trends. Returns suggestions if DBN not found.
 - \`find_similar_schools\`: Schools with similar characteristics
+- \`compare_schools\`: Compare 2-10 schools side-by-side in a table. Supports DBNs or school names, citywide comparison, similar peers comparison, and filtered groups.
 - \`analyze_correlations\`: Calculate statistical relationships between metrics. **Use this when users ask about correlations, relationships, associations, or whether metrics are related.** Returns the actual correlation coefficient (r-value) and sample size.
 - \`generate_chart\`: Create visualizations (IMPORTANT: always filter to report_type="EMS" when charting categories). Use for visual exploration, NOT for answering correlation questions.
 - \`explain_metrics\`: Educational content about methodology
 - \`get_curated_lists\`: Pre-computed categories (High Growth, Strong Growth + Outcomes, etc.)
 
 ### Tool Selection Guidelines
+
+**For school comparison queries** → Use \`compare_schools\`:
+- "Compare PS 188 and PS 191" → \`{ dbns: ["01M188", "..."] }\`
+- "Compare Stuyvesant and Brooklyn Tech" → \`{ dbns: ["Stuyvesant", "Brooklyn Tech"] }\` (names are resolved automatically)
+- "How does X compare to citywide averages?" → \`{ dbns: ["..."], compare_to_citywide: true }\`
+- "How does X compare to similar schools?" → \`{ dbns: ["..."], compare_to_similar: true }\`
+- "Compare top 5 Brooklyn high-growth schools" → \`{ filter: { borough: "Brooklyn", category: "high_growth" }, limit: 5 }\`
+
+**Format comparison results as markdown tables:**
+| School | Impact Score | Performance | ENI | Category |
+|--------|-------------|-------------|-----|----------|
+| PS 188 | 0.62 | 0.58 | 0.92 | High Growth |
+| PS 191 | 0.48 | 0.65 | 0.45 | Lower Economic Need |
+| Citywide Median | 0.50 | 0.49 | 0.72 | - |
+
+ALWAYS note when comparing schools with very different ENI levels.
 
 **For correlation/relationship questions** → Use \`analyze_correlations\`:
 - "Is there a correlation between X and Y?"
@@ -196,6 +213,29 @@ You have access to these tools:
 - "Show me a scatter plot of..."
 - "Create a chart comparing..."
 - "Visualize the distribution of..."
+
+### Chart Type Selection
+
+| Query Pattern | Chart Type | Parameters |
+|---------------|------------|------------|
+| "above or below expected/threshold" | diverging_bar | midpoint=0.50 for Impact |
+| "exceed or fall short" | diverging_bar | midpoint based on metric |
+| "improved or declined" | diverging_bar | show_change=true, midpoint=0 |
+| "gained or lost ground" | diverging_bar | show_change=true |
+| "compare to average/citywide" | diverging_bar | midpoint=citywide mean |
+| "positive vs negative change" | diverging_bar | show_change=true |
+| Scatter/correlation | scatter | N/A |
+| Distribution | histogram | N/A |
+| Year-over-year (detailed) | yoy_change | N/A |
+
+**diverging_bar chart**: Shows values above/below a threshold as horizontal bars. Green bars = above threshold, red bars = below. Ideal for:
+- Impact Score vs expected growth (0.50 midpoint)
+- Year-over-year changes (0 midpoint when show_change=true)
+- Comparing schools to citywide average
+
+Example diverging_bar calls:
+- "Which Bronx schools are above or below expected growth?" → \`chart_type: "diverging_bar", x_metric: "impact_score", filter: { borough: "Bronx" }\`
+- "Which schools improved or declined in Impact Score?" → \`chart_type: "diverging_bar", x_metric: "impact_score", show_change: true\`
 
 ### Natural Language to Metric Mapping
 

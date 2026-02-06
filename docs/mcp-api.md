@@ -157,8 +157,9 @@ Execute a tool and return results.
 | `search_schools` | Filter schools by borough, category, metrics; supports sorting by any metric |
 | `get_school_profile` | Detailed school view with trends |
 | `find_similar_schools` | Find peer schools by ENI/enrollment |
+| `compare_schools` | Compare 2-10 schools side-by-side across metrics |
 | `analyze_correlations` | Calculate correlation between any of 19 metrics (see below) |
-| `generate_chart` | Create chart data for visualization |
+| `generate_chart` | Create chart data for visualization (scatter, bar, histogram, diverging_bar) |
 | `explain_metrics` | Educational content on methodology |
 | `get_curated_lists` | Pre-computed school categories |
 
@@ -233,6 +234,70 @@ Find schools similar to a reference school:
 }
 ```
 
+#### compare_schools
+
+Compare 2-10 schools across key metrics in a table format.
+
+**Compare specific schools by DBN or name:**
+
+```json
+{
+  "name": "compare_schools",
+  "arguments": {
+    "dbns": ["01M188", "02M475"],
+    "compare_to_citywide": true
+  }
+}
+```
+
+**Compare to similar peers:**
+
+```json
+{
+  "name": "compare_schools",
+  "arguments": {
+    "dbns": ["01M188"],
+    "compare_to_similar": true,
+    "limit": 5
+  }
+}
+```
+
+**Compare filtered group (e.g., top Brooklyn high-growth schools):**
+
+```json
+{
+  "name": "compare_schools",
+  "arguments": {
+    "filter": { "borough": "Brooklyn", "category": "high_growth" },
+    "limit": 5
+  }
+}
+```
+
+**Include year-over-year trends:**
+
+```json
+{
+  "name": "compare_schools",
+  "arguments": {
+    "dbns": ["13K123", "09X456"],
+    "include_trends": true
+  }
+}
+```
+
+**Available metrics:**
+- Core (default): `impact_score`, `performance_score`, `economic_need_index`, `enrollment`
+- Attendance (default): `student_attendance`, `teacher_attendance`
+- Staff: `principal_years`, `pct_teachers_3plus_years`
+- Budget: `total_budget`, `pct_funded` (charter budgets not comparable)
+- PTA: `pta_income` (reflects parent wealth)
+- Suspensions: `total_suspensions` (may be redacted)
+- Surveys: `survey_family_involvement`, `survey_family_trust`, `survey_safety`, etc.
+- Ratings: `rating_instruction`, `rating_safety`, `rating_families`
+- Category: `category`
+
 #### analyze_correlations
 
 Calculate correlation between two metrics. Returns Pearson correlation coefficient (r), sample size, and means.
@@ -286,6 +351,48 @@ Calculate correlation between two metrics. Returns Pearson correlation coefficie
   }
 }
 ```
+
+#### generate_chart
+
+Create chart data for visualization. Supports multiple chart types:
+
+**Diverging bar chart** - Shows values above/below a threshold:
+
+```json
+{
+  "name": "generate_chart",
+  "arguments": {
+    "chart_type": "diverging_bar",
+    "x_metric": "impact_score",
+    "filter": { "borough": "Bronx" },
+    "limit": 30
+  }
+}
+```
+
+**Diverging bar with year-over-year change**:
+
+```json
+{
+  "name": "generate_chart",
+  "arguments": {
+    "chart_type": "diverging_bar",
+    "x_metric": "impact_score",
+    "show_change": true
+  }
+}
+```
+
+**Chart types:**
+- `scatter`: Scatter plot for correlation exploration
+- `bar`: Bar chart for categorical comparison
+- `histogram`: Distribution of a single metric
+- `yoy_change`: Year-over-year comparison (scatter format)
+- `diverging_bar`: Values above/below a threshold (horizontal bars)
+
+**Diverging bar parameters:**
+- `midpoint`: Threshold value (default: 0.50 for Impact, 0.49 for Performance, 0.90 for attendance)
+- `show_change`: If true, calculates year-over-year change (midpoint defaults to 0)
 
 #### get_curated_lists
 

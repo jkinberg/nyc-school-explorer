@@ -12,6 +12,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
+  Cell,
 } from 'recharts';
 import type { ChartData } from '@/types/chat';
 
@@ -65,8 +67,14 @@ const CHARTER_LABELS: Record<string, string> = {
   'false': 'Traditional Public',
 };
 
+// Colors for diverging bar chart (above/below threshold)
+const DIVERGING_COLORS = {
+  positive: '#10B981',  // green-500 - above threshold
+  negative: '#EF4444',  // red-500 - below threshold
+};
+
 export function ChartRenderer({ chart }: ChartRendererProps) {
-  const { type, title, xAxis, yAxis, data, colorBy } = chart;
+  const { type, title, xAxis, yAxis, data, colorBy, midpoint } = chart;
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const exportAsPng = async () => {
@@ -257,6 +265,35 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
     );
   };
 
+  // Custom tooltip for diverging bar charts
+  const DivergingTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: Record<string, unknown> }[] }) => {
+    if (!active || !payload?.length) return null;
+
+    const item = payload[0].payload;
+    const deviation = item.deviation as number;
+    const direction = item.isPositive ? 'above' : 'below';
+    const thresholdValue = midpoint ?? 0;
+
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+        <p className="font-medium text-gray-900 dark:text-white">
+          {String(item.name)}
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Value: {formatValue(item.value)}
+        </p>
+        <p className={`text-sm ${item.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {Math.abs(deviation).toFixed(2)} {direction} threshold ({thresholdValue.toFixed(2)})
+        </p>
+        {item.economic_need_index !== undefined && (
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            ENI: {formatValue(item.economic_need_index)}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 my-4">
       <div className="flex items-center justify-between mb-4">
@@ -287,8 +324,8 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
         </div>
       </div>
 
-      <div className="h-80" ref={chartContainerRef}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div className={type === 'diverging_bar' ? 'h-auto min-h-80' : 'h-80'} ref={chartContainerRef}>
+        <ResponsiveContainer width="100%" height={type === 'diverging_bar' ? Math.max(320, data.length * 28 + 80) : '100%'}>
           {type === 'scatter' ? (
             <ScatterChart margin={{ top: 40, right: 20, bottom: 50, left: 60 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
@@ -335,6 +372,36 @@ export function ChartRenderer({ chart }: ChartRendererProps) {
                 />
               ))}
             </ScatterChart>
+          ) : type === 'diverging_bar' ? (
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{ top: 20, right: 30, bottom: 40, left: 150 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <XAxis
+                type="number"
+                label={{ value: yAxis.label, position: 'bottom', offset: 20 }}
+                className="text-gray-600 dark:text-gray-400"
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={140}
+                tick={{ fontSize: 11 }}
+                className="text-gray-600 dark:text-gray-400"
+              />
+              <Tooltip content={<DivergingTooltip />} />
+              <ReferenceLine x={0} stroke="#6B7280" strokeWidth={2} />
+              <Bar dataKey="deviation" radius={[0, 4, 4, 0]}>
+                {data.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.isPositive ? DIVERGING_COLORS.positive : DIVERGING_COLORS.negative}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
           ) : (
             <BarChart data={data} margin={{ top: 20, right: 20, bottom: 40, left: 60 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
