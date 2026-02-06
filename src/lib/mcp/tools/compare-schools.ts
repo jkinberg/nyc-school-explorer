@@ -171,11 +171,17 @@ function mapCategory(cat: string | null): string | null {
  */
 function resolveSchoolIdentifiers(identifiers: string[]): string[] {
   return identifiers.map(id => {
-    // If it looks like a DBN (e.g., "01M188", "13K123"), use directly
+    // If it looks like a DBN (e.g., "01M188", "13K123"), verify it exists
     if (/^\d{2}[A-Z]\d{3}$/i.test(id)) {
-      return id.toUpperCase();
+      const dbn = id.toUpperCase();
+      // Verify the DBN exists in the database
+      const school = getSchoolByDBN(dbn, '2024-25');
+      if (school) {
+        return dbn;
+      }
+      // DBN doesn't exist - fall through to fuzzy search
     }
-    // Otherwise, search by name
+    // Search by name (or as fallback for invalid DBNs)
     const matches = findSchoolsByNameOrDBN(id, 1);
     if (matches.length > 0) {
       return matches[0].dbn;

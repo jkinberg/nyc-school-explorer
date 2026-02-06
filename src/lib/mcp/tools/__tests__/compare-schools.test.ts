@@ -31,14 +31,18 @@ describe('compareSchoolsTool', () => {
 
   describe('specific school comparison', () => {
     it('compares 2 schools by DBN', () => {
-      // Setup mocks for two schools
-      vi.mocked(queries.getSchoolByDBN)
-        .mockReturnValueOnce(testSchools[0] as School) // 13K123
-        .mockReturnValueOnce(testSchools[1] as School); // 09X456
+      // Setup mocks for two schools - use mockImplementation since DBN is verified then fetched
+      vi.mocked(queries.getSchoolByDBN).mockImplementation((dbn: string) => {
+        if (dbn === '13K123') return testSchools[0] as School;
+        if (dbn === '09X456') return testSchools[1] as School;
+        return null;
+      });
 
-      vi.mocked(queries.getLatestMetrics)
-        .mockReturnValueOnce(testMetrics[0] as SchoolMetrics) // 13K123
-        .mockReturnValueOnce(testMetrics[2] as SchoolMetrics); // 09X456
+      vi.mocked(queries.getLatestMetrics).mockImplementation((dbn: string) => {
+        if (dbn === '13K123') return testMetrics[0] as SchoolMetrics;
+        if (dbn === '09X456') return testMetrics[2] as SchoolMetrics;
+        return null;
+      });
 
       const result = compareSchoolsTool({ dbns: ['13K123', '09X456'] });
 
@@ -329,13 +333,18 @@ describe('compareSchoolsTool', () => {
     });
 
     it('warns about charter comparisons when budget is requested', () => {
-      vi.mocked(queries.getSchoolByDBN)
-        .mockReturnValueOnce(testSchools[0] as School) // district school
-        .mockReturnValueOnce(testSchools[6] as School); // charter
+      // Use mockImplementation since DBN is verified then fetched
+      vi.mocked(queries.getSchoolByDBN).mockImplementation((dbn: string) => {
+        if (dbn === '13K123') return testSchools[0] as School; // district school
+        if (dbn === '84K001') return testSchools[6] as School; // charter
+        return null;
+      });
 
-      vi.mocked(queries.getLatestMetrics)
-        .mockReturnValueOnce(testMetrics[0] as SchoolMetrics)
-        .mockReturnValueOnce(testMetrics[7] as SchoolMetrics);
+      vi.mocked(queries.getLatestMetrics).mockImplementation((dbn: string) => {
+        if (dbn === '13K123') return testMetrics[0] as SchoolMetrics;
+        if (dbn === '84K001') return testMetrics[7] as SchoolMetrics;
+        return null;
+      });
 
       vi.mocked(queries.getBudgetsByDBN).mockReturnValue([]);
 
