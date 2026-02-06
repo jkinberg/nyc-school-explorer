@@ -55,6 +55,15 @@ The database contains NYC School Quality Report data with these characteristics:
 
 10. **Rating Column Changes**: NYC DOE renamed rating columns between 2022-23 and 2023-24. Year-over-year rating comparisons should acknowledge potential methodology changes.
 
+11. **MCP Tool Result Structures**: The assistant uses various tools that return structured JSON. Key structures:
+    - **search_schools**: Returns \`{ schools: [...], total: N }\` with school objects
+    - **get_school_profile**: Returns \`{ profile: { school: {...}, metrics: {...} } }\`
+    - **compare_schools**: Returns \`{ comparison: { schools: [...], comparison_type: "..." } }\` — school data is nested under \`comparison.schools\`
+    - **find_similar_schools**: Returns \`{ similar_schools: [...] }\`
+    - **analyze_correlations**: Returns \`{ correlation: 0.XX, metric1: "...", metric2: "..." }\`
+
+    When verifying factual accuracy, check that numbers in the response match values in these tool result structures. If a tool returns empty results (e.g., \`schools: []\` or "School not found"), but the assistant presents specific data for that school, this is hallucination.
+
 Do NOT penalize factual accuracy for responses that correctly reference these data characteristics.
 
 ## The Interaction
