@@ -505,6 +505,16 @@ function extractSchoolMappings(
       }
       break;
     }
+    case 'compare_schools': {
+      const comparison = result.comparison as Record<string, unknown> | undefined;
+      const schools = comparison?.schools as Record<string, unknown>[] | undefined;
+      if (schools) {
+        for (const school of schools) {
+          extractFromSchool(school);
+        }
+      }
+      break;
+    }
     // generate_chart, analyze_correlations, explain_metrics don't return individual schools
   }
 
@@ -562,6 +572,18 @@ function generateToolResultSummary(toolName: string, result: Record<string, unkn
       }
       const label = listType?.replace(/_/g, ' ') || 'curated';
       return `Retrieved ${schools.length} ${label} school${schools.length !== 1 ? 's' : ''}`;
+    }
+    case 'compare_schools': {
+      const comparison = result.comparison as Record<string, unknown> | undefined;
+      const schools = comparison?.schools as Record<string, unknown>[] | undefined;
+      if (!schools || schools.length === 0) {
+        return 'No schools to compare';
+      }
+      const comparisonType = comparison?.comparison_type as string | undefined;
+      const typeLabel = comparisonType === 'vs_citywide' ? ' (vs citywide)' :
+                        comparisonType === 'vs_similar' ? ' (vs similar peers)' :
+                        comparisonType === 'filtered' ? ' (filtered)' : '';
+      return `Compared ${schools.length} school${schools.length !== 1 ? 's' : ''}${typeLabel}`;
     }
     default:
       return 'Tool completed successfully';
