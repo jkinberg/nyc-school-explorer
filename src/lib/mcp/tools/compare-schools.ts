@@ -175,7 +175,7 @@ function resolveSchoolIdentifiers(identifiers: string[]): string[] {
     if (/^\d{2}[A-Z]\d{3}$/i.test(id)) {
       const dbn = id.toUpperCase();
       // Verify the DBN exists in the database
-      const school = getSchoolByDBN(dbn, '2024-25');
+      const school = getSchoolByDBN(dbn);
       if (school) {
         return dbn;
       }
