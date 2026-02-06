@@ -19,6 +19,7 @@ An AI-native data journalism tool for exploring NYC School Quality Report data t
 - **Auto-linked school names**: school names in responses link directly to profile pages (opens in new tab)
 - **Tool visibility**: collapsible cards show when Claude is searching, analyzing, or generating charts
 - **Smart scrolling**: no auto-scroll during streaming; floating "scroll to bottom" button when reading history
+- **Contextual follow-ups**: AI-generated suggestions reference specific schools, boroughs, and metrics from the conversation
 - **Copy response text**: copy button on each AI response to copy plain text to clipboard
 - **Export charts**: download charts as PNG (high-resolution) or CSV (with proper escaping)
 - **Copy evaluation**: copy button in evaluation dropdown to copy scores and summary

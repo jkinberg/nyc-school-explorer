@@ -63,7 +63,8 @@ src/
 │   ├── ai/                       # AI guardrails
 │   │   ├── prefilter.ts          # Pre-filter harmful queries
 │   │   ├── system-prompt.ts      # Claude system prompt
-│   │   └── evaluation.ts         # LLM-as-judge scoring
+│   │   ├── evaluation.ts         # LLM-as-judge scoring
+│   │   └── suggestions.ts        # Contextual follow-up suggestions
 │   ├── db/                       # Database layer
 │   │   ├── connection.ts         # SQLite connection
 │   │   └── queries.ts            # Query functions
@@ -340,8 +341,9 @@ _context: {
 6. **Summarize tool results** before sending back to Claude (see below)
 7. Stream response via SSE (`text_delta` events)
 8. Emit `done` event with `evaluating: true/false` flag
-9. If evaluation enabled: await LLM-as-judge evaluation (10s timeout), emit `evaluation` SSE event
-10. Close stream
+9. Generate contextual follow-up suggestions (15s timeout), emit `suggested_queries` SSE event
+10. If evaluation enabled: await LLM-as-judge evaluation (30s timeout), emit `evaluation` SSE event
+11. Close stream
 
 ### Tool Result Summarization (ESSENTIAL_SCHOOL_FIELDS)
 
@@ -377,6 +379,7 @@ The full unsummarized tool results are still:
 1. Sent to the client via SSE events (for UI display)
 2. Stored for LLM-as-judge evaluation
 3. Used for school name extraction and linking
+4. Used for contextual follow-up suggestion generation
 
 Only the conversation context sent back to Claude is summarized.
 
@@ -415,12 +418,36 @@ The chat UI (`src/components/chat/`) includes several user experience enhancemen
 - **Copy evaluation**: Copy button in evaluation dropdown formats scores, summary, and flags as text
 - Visual feedback: Button shows "Copied" with checkmark for 2 seconds after copying
 
+### Contextual Follow-up Suggestions
+
+After each response, the system generates contextual follow-up query suggestions using Gemini Flash (`src/lib/ai/suggestions.ts`):
+
+**Entity Extraction**: Tool results are parsed to extract key entities:
+- Schools mentioned (name, DBN, borough)
+- Boroughs discussed
+- Metrics analyzed (impact_score, performance_score, etc.)
+- Analysis type (comparison, correlation, chart, profile)
+
+**LLM Generation**: Gemini receives:
+- User query
+- Assistant response (up to 4000 chars)
+- Extracted entities summary
+
+**Example Output**:
+- After comparing Bronx schools: "Compare Bronx International HS to other international schools"
+- After school profile: "Compare P.S. 188 to other high-growth Manhattan schools"
+- After correlation: "Does teacher attendance correlate at high-poverty schools?"
+
+**Fallback**: If LLM fails or times out (15s), entity-based contextual fallback generates suggestions using extracted schools, boroughs, and analysis types.
+
+**Guardrails**: All suggestions are validated against the same prefilter patterns used for user queries. Suggestions that would be blocked (rankings, demographic filtering) are filtered out.
+
 ### Evaluation SSE Flow
 
 The chat API keeps the SSE stream open after `done` to deliver evaluation results:
 
 ```
-text_delta → ... → done (evaluating: true) → [2-5s] → evaluation → stream closes
+text_delta → ... → done (evaluating: true) → [2-5s] → suggested_queries → evaluation → stream closes
 ```
 
 - The `done` event includes an `evaluating` boolean so the client can show an "Evaluating response..." indicator

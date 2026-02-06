@@ -95,10 +95,10 @@ Ideas and potential improvements for NYC School Explorer, organized by category 
 **Solution**: Export to CSV, PDF, or shareable link.
 **Use case**: Journalists preparing stories, parents comparing options.
 
-### P2: Suggested follow-up queries
+### ~~P2: Suggested follow-up queries~~ ✅ IMPLEMENTED
 **Problem**: Users may not know what questions to ask next.
 **Solution**: Show 2-3 contextual follow-up suggestions after each response.
-**Current state**: `SuggestedQueries.tsx` exists but may need improvement.
+**Status**: Implemented in `src/lib/ai/suggestions.ts`. Uses Gemini Flash with entity extraction from tool results to generate contextual suggestions that reference specific schools, boroughs, and metrics from the conversation. Includes entity-aware fallback when LLM fails.
 
 ### P2: Query history
 **Problem**: Users can't easily revisit previous questions.
