@@ -240,6 +240,12 @@ The system supports flexible school name searching with several features:
 - Suggestions use LIKE matching first, then Levenshtein fuzzy matching
 - Example: `get_school_profile({ dbn: "Brooklyn Tech" })` returns suggestions
 
+**DBN Validation in `compare_schools`:**
+- DBN-like strings (e.g., "01M188") are verified to exist before use
+- If a DBN doesn't exist, falls back to fuzzy name search
+- Prevents hallucination from invalid/misremembered DBNs
+- Example: `compare_schools({ dbns: ["01M291"] })` → DBN doesn't exist → fuzzy search finds "01M292"
+
 ### Natural Language Sorting
 
 The AI understands natural language sorting requests and maps them to `sort_by`/`sort_order` parameters:

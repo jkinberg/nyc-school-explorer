@@ -238,6 +238,8 @@ Find schools similar to a reference school:
 
 Compare 2-10 schools across key metrics in a table format.
 
+**DBN Validation:** The tool validates that DBN-like strings (e.g., "01M188") actually exist in the database. If a DBN doesn't exist, it falls back to fuzzy name search to find the closest match. This prevents errors from invalid or misremembered DBNs.
+
 **Compare specific schools by DBN or name:**
 
 ```json
