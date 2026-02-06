@@ -380,7 +380,8 @@ export async function POST(request: NextRequest) {
             tasks.push((async () => {
               try {
                 // Truncate tool results for evaluation to keep Gemini prompt reasonable
-                const evalToolResults = toolResults.join('\n').slice(0, 10_000);
+                // 20K chars allows ~20 schools with full metrics before truncation
+                const evalToolResults = toolResults.join('\n').slice(0, 20_000);
                 const evaluation = await geminiTimeout(
                   evaluateResponse(
                     latestUserMessage.content,

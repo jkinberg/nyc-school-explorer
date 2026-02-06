@@ -64,6 +64,8 @@ The database contains NYC School Quality Report data with these characteristics:
 
     When verifying factual accuracy, check that numbers in the response match values in these tool result structures. If a tool returns empty results (e.g., \`schools: []\` or "School not found"), but the assistant presents specific data for that school, this is hallucination.
 
+    **Important**: Tool results may be truncated for large datasets (e.g., 20+ schools). If the tool shows "Found N schools" but you only see partial data, assume the assistant had access to the full dataset. Only flag as hallucination if data contradicts what IS visible or if the tool explicitly returned no results.
+
 Do NOT penalize factual accuracy for responses that correctly reference these data characteristics.
 
 ## The Interaction
