@@ -44,10 +44,10 @@ Ideas and potential improvements for NYC School Explorer, organized by category 
 
 ## Data & Features
 
-### P1: Add school comparison tool
+### ~~P1: Add school comparison tool~~ ✅ IMPLEMENTED
 **Problem**: Users frequently want to compare 2-3 specific schools side-by-side.
 **Solution**: `compare_schools` tool that shows metrics in a comparison table/chart.
-**Example**: "Compare PS 234 and PS 188 on all metrics"
+**Status**: Implemented in `src/lib/mcp/tools/compare-schools.ts`. Supports comparing 2-10 schools by DBN or name, comparison to citywide averages, comparison to similar peers, and filtered comparisons (e.g., "top 5 high-growth Bronx schools"). Includes optional metrics (budget, PTA, suspensions, surveys) and YoY trends.
 
 ### P1: Geographic/map-based queries
 **Problem**: Users ask about "schools near [address]" or "in my neighborhood".
@@ -90,10 +90,10 @@ Ideas and potential improvements for NYC School Explorer, organized by category 
 **Solution**: Responsive design improvements for chat, charts, and tables.
 **Signals**: Check analytics for mobile traffic percentage.
 
-### P1: Exportable results
+### ~~P1: Exportable results~~ ✅ PARTIALLY IMPLEMENTED
 **Problem**: Users may want to save or share findings.
 **Solution**: Export to CSV, PDF, or shareable link.
-**Use case**: Journalists preparing stories, parents comparing options.
+**Status**: Charts can be exported as PNG (high-resolution, 2x for retina) and CSV (with proper escaping). Response text can be copied to clipboard. PDF export and shareable links not yet implemented.
 
 ### ~~P2: Suggested follow-up queries~~ ✅ IMPLEMENTED
 **Problem**: Users may not know what questions to ask next.
@@ -120,10 +120,10 @@ Ideas and potential improvements for NYC School Explorer, organized by category 
 
 ## Responsible AI & Trust
 
-### P1: Explain evaluation scores to users
+### ~~P1: Explain evaluation scores to users~~ ✅ IMPLEMENTED
 **Problem**: Users see confidence badges but may not understand what they mean.
 **Solution**: Expandable explanation of what each dimension measures.
-**Current state**: ConfidenceBadge shows scores; could add tooltips/help text.
+**Status**: ConfidenceBadge component shows weighted score with click-to-expand panel displaying individual dimension scores (factual accuracy, context inclusion, limitation acknowledgment, responsible framing, query relevance), summary text, and any flags. Users can copy evaluation details.
 
 ### P1: Feedback loop improvements
 **Problem**: Flag button exists but feedback could be more structured.
